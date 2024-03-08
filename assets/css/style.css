@@ -1,0 +1,25 @@
+
+* {
+    box-sizing: border-box;
+}
+.select-row{
+	display: flex;
+	flex-wrap: wrap;
+}
+.bp-card-expiry{
+	-webkit-appearance: none;
+	appearance: none;
+    padding: 10px;
+    font-size: 14px;
+}
+.select-col-half,.select-2-col-half{
+	width: 50%;
+	padding-right: 15px;
+}
+.select-2-col-half{
+	padding-right: 0;
+	padding-left: 15px;
+}
+.select-col-half .woocommerce #payment .form-row select, .woocommerce-page #payment .form-row select{
+	width: 100% !important;
+}
