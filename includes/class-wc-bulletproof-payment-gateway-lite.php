@@ -4,14 +4,13 @@ if (!defined('ABSPATH')) {
 }
 
 // Include WooCommerce Payment Gateway class.
-class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
-{
+class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway {
+
 
     /**
      * Constructor function to initialize the payment gateway settings.
      */
-    public function __construct()
-    {
+    public function __construct() {
 
         // Define basic information about the payment gateway.
         $this->id = 'bulletproof_bpcheckout_lite';
@@ -53,14 +52,13 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
         add_action('wp', array( $this, 'bulletproof_payment_response_handler' ));
 
         // Validate credentials when saving payment gateway settings
-        add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array($this,'bulletproof_validate_payment_gateway_credentials' ));
+        add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( $this, 'bulletproof_validate_payment_gateway_credentials' ));
     }
 
     /**
     * Define form fields for WooCommerce settings.
     */
-    public function init_form_fields()
-    {
+    public function init_form_fields() {
         // Definition of form fields for the WooCommerce settings.
         $this->form_fields = array(
             'enabled' => array(
@@ -99,7 +97,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
             ),
             'password'    => array(
                 'title'       => __('Password', 'bulletproof-payment-gateway-lite'),
-                'type'        => 'text',
+                'type'        => 'password',
                 'description' => __('This is the API user password generated within the BulletProof checkout.', 'bulletproof-payment-gateway-lite'),
                 'default'     => '',
             ),
@@ -140,7 +138,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
         // Check if processors are available and build the list.
         if (!empty($processors) && !isset($processors->error)) {
-            
+
             foreach ($processors as $key => $processor) {
                 $processors_list[$processor->{'processor-id'}->{'0'}] = $processor->{'processor-id'}->{'0'};
             }
@@ -157,22 +155,24 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
         }
     }
 
+
     /**
      * Function to display error notices.
      * This function displays any error notices generated during the settings save process.
     */
 
 
-    public function display_bulletproof_payment_gateway_credentials_error(){
+    public function display_bulletproof_payment_gateway_credentials_error() {
         // Display error notices
-       if ($message = get_transient('custom_gateway_api_error')) {
-        ?>
-            <div class="notice notice-error is-dismissible">
-                <p><?php echo $message; ?></p>
-            </div>
-            <?php
+        $message = get_transient('custom_gateway_api_error');
+        if ($message) {
+            ?>
+        <div class="notice notice-error is-dismissible">
+            <p><?php esc_html( $message ); ?></p>
+        </div>
+        <?php
             // Delete the transient to avoid displaying the message again
-            delete_transient('custom_gateway_api_error');
+         delete_transient('custom_gateway_api_error');
         }
     }
 
@@ -183,18 +183,18 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
      * performs validation, and adds an error notice if the credentials are not valid.
     */
 
-    public function bulletproof_validate_payment_gateway_credentials(){
+    public function bulletproof_validate_payment_gateway_credentials() {
         // Check requires params in post
-        
-        if(!empty($this->get_post(esc_attr('woocommerce_'.$this->id) . '_username')) && !empty($this->get_post(esc_attr('woocommerce_'.$this->id) . '_password')) && !empty($this->get_post(esc_attr('woocommerce_'.$this->id) . '_api_key'))){
-            
+
+        if (!empty($this->get_post(esc_attr('woocommerce_' . $this->id) . '_username')) && !empty($this->get_post(esc_attr('woocommerce_' . $this->id) . '_password')) && !empty($this->get_post(esc_attr('woocommerce_' . $this->id) . '_api_key'))) {
+
             // Perform credential validation
-            $api_response = $this->get_bulletproof_processors($this->get_post(esc_attr('woocommerce_'.$this->id) . '_username'), $this->get_post(esc_attr('woocommerce_'.$this->id) . '_password'), $this->get_post(esc_attr('woocommerce_'.$this->id) . '_api_key'));
+            $api_response = $this->get_bulletproof_processors($this->get_post(esc_attr('woocommerce_' . $this->id) . '_username'), $this->get_post(esc_attr('woocommerce_' . $this->id) . '_password'), $this->get_post(esc_attr('woocommerce_' . $this->id) . '_api_key'));
             // If credentials are not valid, add an error notice
-            if(!empty($api_response) && isset($api_response->error)){
+            if (!empty($api_response) && isset($api_response->error)) {
                 set_transient('custom_gateway_api_error', __('Invalid API credentials. Please check your API Key username and password.', 'bulletproof-payment-gateway-lite'));
                 
-                add_action('admin_notices', array($this, 'display_bulletproof_payment_gateway_credentials_error'));
+                add_action('admin_notices', array( $this, 'display_bulletproof_payment_gateway_credentials_error' ));
                 return;
             }
         }
@@ -204,88 +204,59 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     /**
     * Handler for processing payment responses.
     */
-    public function bulletproof_payment_response_handler()
-    {
+    public function bulletproof_payment_response_handler() {
         // Check if the order status has already been updated.
         $status_updated = false;
         $order_id = isset($_GET['orderid']) ? intval($_GET['orderid']) : 0;
         $transaction_id = isset($_GET['transactionid']) ? intval($_GET['transactionid']) : 0;
         // Code for processing payment responses based on query parameters.
         if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
+
             $order = new WC_Order($order_id);
+
             $this->bulletproof_update_order_meta($order_id, $transaction_id);
 
-            if ($this->get_option('salemethod') == 'auth') {
-                $username = $this->get_option('username');
-                $password = $this->get_option('password');
-                $security_key = $this->get_option('api_key');
-
-                $request_args = array(
-                    'headers' => array(
-                        'accept' => 'application/json',
-                    ),
-                    'body' => '',
-                );
-
-                $api_url = BULLETPROOF_CHECKOUT_API_BASE_URL . 'capture_payment.php?user=' . urlencode($username) .
-                '&pass=' . urlencode($password) .
-                '&security_key=' . urlencode($security_key) .
-                '&transactionid=' . urlencode($transaction_id);
-
-                $response = $this->bulletproof_capture_payment_api($api_url, $request_args, 'Capture Payment');
-                parse_str($response['data'], $responseArray);
-                if (isset($responseArray['response']) && 1 == $responseArray['response']) {
-                    $order->payment_complete();
-
-                 // Update status only if not already updated.
-                    if (!$status_updated) {
-                        $order->update_status('completed');
-                        $status_updated = true; // Set the flag to true after updating status.
-                    }
-
-                    $order->save();
-                }
-            } else {
+            if ($this->get_option('salemethod') == 'sale') {
                 $order->payment_complete();
-                // Update status only if not already updated.
-                if (!$status_updated) {
-                    $order->update_status('completed');
-                    $status_updated = true; // Set the flag to true after updating status.
-                }
+                $order->update_status('completed');       
+                $order->save();
+                wc_maybe_reduce_stock_levels( $order_id );
+                
+            } else {
+
+                $order->update_status('wc-on-hold'); 
 
                 $order->save();
             }
             WC()->cart->empty_cart();
-            wp_safe_redirect($this->get_return_url($order));
+            // wp_safe_redirect($this->get_return_url($order));
         } elseif (!empty($_GET['denial']) || !empty($_GET['token'])) {
             wc_add_notice(__('Transaction Failed', 'bulletproof-payment-gateway-lite'), $notice_type = 'error');
-            wp_safe_redirect(wc_get_checkout_url());
+            // wp_safe_redirect(wc_get_checkout_url());
         }
     }
+
 
     /**
     * Register custom endpoint for BulletProof payment processing.
     */
-    public function bulletproof_payment_endpoint()
-    {
+    public function bulletproof_payment_endpoint() {
         add_rewrite_endpoint('bulletproof-payment-processing', EP_ROOT | EP_PAGES);
     }
 
     /**
-    * Function to make API requests for capturing payment.
+    * Function to make API requests for refund payment.
     *
     * @param string $api_url
     * @param array $request_args
-    * @param string $endpoint
     * @return array|mixed|object
     */
-    public function bulletproof_capture_payment_api($api_url, $request_args, $endpoint)
-    {
-        // API request logic for capturing payment.
+    public function bulletproof_refund_payment_api( $api_url, $request_args ) {
+        // API request logic for refund.
         $response = wp_remote_post($api_url, $request_args);
 
         if (is_wp_error($response)) {
-            error_log($endpoint . 'API request failed: ' . $response->get_error_message());
+            error_log('Refund API request failed: ' . $response->get_error_message());
         } else {
             $body = wp_remote_retrieve_body($response);
             $decoded_response = json_decode($body, true);
@@ -296,8 +267,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     /**
     * Enqueue payment-related styles.
     */
-    public function bulletproof_payment_scripts()
-    {
+    public function bulletproof_payment_scripts() {
         wp_enqueue_style('payment-styles', plugins_url('../assets/css/style.css', __FILE__), array(), '1.0');
     }
 
@@ -307,8 +277,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param string $name
     * @return mixed|null
     */
-    protected function get_post($name)
-    {
+    protected function get_post( $name ) {
         // Retrieve POST data.
         if (isset($_POST[ $name ])) {
             return sanitize_text_field($_POST[ $name ]);
@@ -319,8 +288,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     /**
     * Function to display additional payment fields during checkout.
     */
-    public function payment_fields()
-    {
+    public function payment_fields() {
         // Display additional payment fields during checkout.
         if ($this->description) {
             if ($this->testmode) {
@@ -350,30 +318,33 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
             <label for="<?php echo esc_attr($this->id); ?>-card-number"><?php echo esc_html__('Card Number', 'bulletproof-payment-gateway-lite'); ?> <span class="required">*</span></label>
             <input type="text" class="input-text" pattern="[0-9]*" id="<?php echo esc_attr($this->id); ?>-card-number" name="<?php echo esc_attr($this->id); ?>_card_number" />
         </div>
-        <div class="form-row form-row-wide">
-            <label for="<?php echo esc_attr($this->id); ?>-card-expiry"><?php esc_html__('Expiration Date', 'bulletproof-payment-gateway-lite'); ?> <span class="required">*</span></label>
+        <div class="form-row form-row-wide card-expiry-cvv">
+            
             <?php
-            $current_month = gmdate('m');
             $months = array();
-            for ($i = $current_month; $i <= 12; $i++) {
+            for ($i = 1; $i <= 12; $i++) {
                 $month_value = str_pad($i, 2, '0', STR_PAD_LEFT);
                 $months[$month_value] = $month_value;
             }
             ?>
-            <div class="select-row">
-                <div class="select-col-half">
-                    <select id="<?php echo esc_attr($this->id); ?>-card-expiry-month" name="<?php echo esc_attr($this->id); ?>_card_expiry_month" class="bp-card-expiry">
-                        <option value=""></option>
-                        <?php
+            <div class="date-year-section">
+                <div class="select-row">
+                    <div class="select-col-half w-33">
+                        <label for="<?php echo esc_attr($this->id); ?>-card-expiry"><?php echo esc_html__('Month', 'bulletproof-payment-gateway-lite'); ?> <span class="required">*</span></label>
+                        <select id="<?php echo esc_attr($this->id); ?>-card-expiry-month" name="<?php echo esc_attr($this->id); ?>_card_expiry_month" class="bp-card-expiry">
+                            <option value=""></option>
+                            <?php
 
-                        foreach ($months as $month_value => $month_label) {
-                            echo "<option value='" . esc_attr($month_value) . "'>" . esc_html($month_label) . '</option>';
-                        }
-                        ?>
-                    </select>
-                </div>
-                <div class="select-2-col-half">
-                    <select id="<?php echo esc_attr($this->id); ?>-card-expiry-year" name="<?php echo esc_attr($this->id); ?>_card_expiry_year" class="bp-card-expiry">
+                            foreach ($months as $month_value => $month_label) {
+                                echo "<option value='" . esc_attr($month_value) . "'>" . esc_html($month_label) . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="select-2-col-half w-33">
+                       <label for="<?php echo esc_attr($this->id); ?>-card-expiry"><?php echo esc_html__('Year', 'bulletproof-payment-gateway-lite'); ?> <span class="required">*</span></label>
+                       <select id="<?php echo esc_attr($this->id); ?>-card-expiry-year" name="<?php echo esc_attr($this->id); ?>_card_expiry_year" class="bp-card-expiry">
+
                         <option value=""></option>      
                         <?php
                         $current_year = gmdate('Y');
@@ -385,16 +356,22 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
                         ?>
                     </select>
                 </div>
+                
+                
+                <div class="form-row form-row-wide w-33">
+                    <label for="<?php echo esc_attr($this->id); ?>-card-cvc"><?php echo esc_html(__('CVV', 'bulletproof-payment-gateway-lite')); ?> <span class="required">*</span></label>
+                    <input type="text" class="input-text bulletproof-card-cvv" pattern="\d{3,4}" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" />
+                </div>
+                
+
             </div>
         </div>
-        <div class="form-row form-row-wide">
-            <label for="<?php echo esc_attr($this->id); ?>-card-cvc"><?php echo esc_html(__('CVV', 'bulletproof-payment-gateway-lite')); ?> <span class="required">*</span></label>
-            <input type="text" class="input-text" pattern="^\d{3,4}$" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" />
-        </div>
-        <!-- Add the hidden nonce field -->
-        <?php
-        
-        echo '<input type="hidden" name="bulletproof_payment_nonce" value="' . esc_attr(wp_create_nonce('bulletproof_payment_nonce')) . '" />';
+    </div>
+    <div id="cvv-error" style="color: red; display: none;">Please enter a valid 3 or 4 digit number</div>
+    <!-- Add the hidden nonce field -->
+    <?php
+    
+    echo '<input type="hidden" name="bulletproof_payment_nonce" value="' . esc_attr(wp_create_nonce('bulletproof_payment_nonce')) . '" />';
         /**
          * Action hook to indicate the end of the credit card form.
          *
@@ -407,15 +384,17 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
         if ('yes' == $this->enable_vault) {
             ?>
             <div style="clear: both;"></div>
-            <p>
-                <label for="save_payment_info"><?php echo esc_html__('Save payment information to my account', 'bulletproof-payment-gateway-lite'); ?></label>
+            <p class="save-payment-checkbox">
                 <input type="checkbox" class="input-checkbox" id="save_payment_info" name="save_payment_info" />
+                <label for="save_payment_info"><?php echo esc_html__('Save payment information to my account', 'bulletproof-payment-gateway-lite'); ?></label>
+                
 
             </p>
             <?php
         }
         echo '<div class="clear"></div></fieldset>';
     }
+
 
     /**
     * Processes a refund for an order.
@@ -425,42 +404,41 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param string $reason The reason for the refund.
     * @return bool|WP_Error True on success, WP_Error on failure.
     */
-    public function process_refund($order_id, $amount = null, $reason = '')
-    {
+    public function process_refund( $order_id, $amount = null, $reason = '' ) {
         // Get the WooCommerce order.
         $order = wc_get_order($order_id);
         // Check if the order is valid.
         if (!$order || !is_object($order)) {
-              return new WP_Error('invalid_order', 'Invalid order.');
+          return new WP_Error('invalid_order', 'Invalid order.');
         }
         // Get API credentials and transaction ID.
-        $username = $this->get_option('username');
-        $password = $this->get_option('password');
-        $security_key = $this->get_option('api_key');
-        $transaction_id = get_post_meta($order_id, '_payment_gateway_tx_received', true);
+      $username = $this->get_option('username');
+      $password = $this->get_option('password');
+      $security_key = $this->get_option('api_key');
+      $transaction_id = get_post_meta($order_id, '_payment_gateway_tx_received', true);
 
         // Prepare request arguments.
-        $request_args = array(
+      $request_args = array(
         'headers' => array(
             'accept' => 'application/json',
         ),
         'body' => '',
-        );
+    );
 
         // Build the API URL with parameters.
-        $api_url = BULLETPROOF_CHECKOUT_API_BASE_URL . 'refund.php?user=' . urlencode($username) .
-        '&pass=' . urlencode($password) .
-        '&security_key=' . urlencode($security_key) .
-        '&transactionid=' . urlencode($transaction_id);
+      $api_url = BULLETPROOF_CHECKOUT_API_BASE_URL . 'refund.php?user=' . urlencode($username) .
+      '&pass=' . urlencode($password) .
+      '&security_key=' . urlencode($security_key) .
+      '&transactionid=' . urlencode($transaction_id);
 
         // Make the refund API call.
-        $response = $this->bulletproof_capture_payment_api($api_url, $request_args, 'Refund');
-        error_log(print_r($response, true));
+      $response = $this->bulletproof_refund_payment_api($api_url, $request_args);
+      error_log(print_r($response, true));
 
         // $order->update_status('refunded');
         // $order->add_order_note('Refunded via Custom Gateway.');
 
-        return true;
+      return true;
     }
 
     /**
@@ -468,8 +446,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     *
     * @return array The list of processors.
     */
-    public function get_bulletproof_processors($username, $password, $security_key)
-    {
+    public function get_bulletproof_processors( $username, $password, $security_key ) {
         // Set the API URL for retrieving processors.
         $api_url = BULLETPROOF_CHECKOUT_API_BASE_URL . 'processors.php';
 
@@ -480,19 +457,19 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
         // Prepare request arguments.
         $request_args = array(
-        'headers' => array(
-            'Accept' => 'application/json',
-        ),
-        'body' => array(
-            'user' => $username,
-            'pass' => $password,
-            'security_key' => $security_key,
-        ),
+            'headers' => array(
+                'Accept' => 'application/json',
+            ),
+            'body' => array(
+                'user' => $username,
+                'pass' => $password,
+                'security_key' => $security_key,
+            ),
         );
 
         // Make the processors API call.
         $response = wp_remote_post($api_url, $request_args);
-
+        $processors = '';
         // Check if the API request was successful.
         if (!is_wp_error($response)) {
             $body = wp_remote_retrieve_body($response);
@@ -514,8 +491,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     *
     * @return bool True if validation passes, false otherwise.
     */
-    public function validate_fields()
-    {
+    public function validate_fields() {
         // Get card details from post data.
         $card_number           = $this->get_post(esc_attr($this->id) . '_card_number');
         $card_cvv              = $this->get_post(esc_attr($this->id) . '_card_cvc');
@@ -545,16 +521,16 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
         // Validate card expiration date.
         if (! ctype_digit($card_expiration_month) || ! ctype_digit($card_expiration_year) ||
-        $card_expiration_month > 12 || $card_expiration_month < 1 || $card_expiration_year < $current_year || $card_expiration_year > $current_year + 10) {
+            $card_expiration_month > 12 || $card_expiration_month < 1 || $card_expiration_year < $current_year || $card_expiration_year > $current_year + 10) {
             wc_add_notice(__('Card expiration date is invalid', 'bulletproof-payment-gateway-lite'), $notice_type = 'error');
-            return false;
+        return false;
         }
 
         // Remove spaces and hyphens from card number.
-        $card_number = str_replace(array( ' ', '-' ), '', $card_number);
+    $card_number = str_replace(array( ' ', '-' ), '', $card_number);
 
         // Validation passed.
-        return true;
+    return true;
     }
 
     /**
@@ -563,8 +539,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param int $order_id The ID of the WooCommerce order.
     * @return array An array with 'result' and 'redirect' keys.
     */
-    public function process_payment($order_id)
-    {
+    public function process_payment( $order_id ) {
         if (! isset($_POST['bulletproof_payment_nonce']) || ! wp_verify_nonce(sanitize_text_field($_POST['bulletproof_payment_nonce']), 'bulletproof_payment_nonce')) {
             // Nonce verification failed, handle error
             return;
@@ -588,8 +563,8 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
             // Return success with redirection URL.
             return array(
-            'result' => 'success',
-            'redirect' => $validate_api_url,
+                'result' => 'success',
+                'redirect' => $validate_api_url,
             );
         } elseif (isset($sale_auth_response->error) && !empty($sale_auth_response->error)) {
             // Check if there is an error in the sale authorization response.
@@ -605,8 +580,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param int    $order_id The ID of the WooCommerce order.
     * @param string $transaction_id The transaction ID.
     */
-    public function bulletproof_update_order_meta($order_id, $transaction_id)
-    {
+    public function bulletproof_update_order_meta( $order_id, $transaction_id ) {
         // Get the current date and time.
         $order_date = gmdate('Y-m-d H:i:s');
 
@@ -639,8 +613,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param int      $order_id The ID of the WooCommerce order.
     * @return array An array of parameters for sale authorization.
     */
-    public function bulletproof_checkout_api_params($order, $order_id)
-    {
+    public function bulletproof_checkout_api_params( $order, $order_id ) {
         // Initialize an array to store item product codes.
         $item_product_code = array();
 
@@ -691,8 +664,8 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
             'amount' => $order->get_total(),
             'orderid' => $order_id,
             'format' => BULLETPROOF_CHECKOUT_FORMAT,
-            'approval_url' => home_url('/bulletproof-payment-processing'),
-            'denial_url' => home_url('/bulletproof-payment-processing'),
+            'approval_url' => $this->get_return_url($order),
+            'denial_url' => wc_get_checkout_url(),
             'vault' => $vault,
             'customer-id' => $order->get_user_id(),
             'processor-id' => $processor,
@@ -719,8 +692,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param string $method The request method (GET or POST).
     * @return mixed|void The API response.
     */
-    public function bulletproof_checkout_api($api_url, $params, $method = 'POST')
-    {
+    public function bulletproof_checkout_api( $api_url, $params, $method = 'POST' ) {
         // Make the API call using wp_remote_post.
         $response = wp_remote_post(
             $api_url,
@@ -728,7 +700,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
                 'body'    => $params,
                 'headers' => array(
                     'accept' => 'application/json',
-                )
+                ),
             )
         );
 
@@ -750,8 +722,7 @@ class WC_Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
     * @param int $length The length of the random string.
     * @return string The generated random string.
     */
-    public function generateRandomString($length = 10)
-    {
+    public function generateRandomString( $length = 10 ) {
         // Define characters for the random string.
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 

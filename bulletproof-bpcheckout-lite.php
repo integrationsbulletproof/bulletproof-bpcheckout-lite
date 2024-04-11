@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name: BulletProof Checkout Lite
- * Description: Receive Credit Card payments using the BulletProof Gateway.
+ * Description: Receive Credit Card payments using the BulletProof Gateway API
  * Version: 1.0
- * Author: Manish Gautam 
+ * Author: BulletProof Checkout.com  
  * Text Domain: bulletproof-payment-gateway-lite
  */
 
 // Define constants for API base URL, gateway identifiers, and response format.
-define('BULLETPROOF_CHECKOUT_API_BASE_URL', 'https://bulletproof-checkout.com/API/endpoints/directpost/');
+define('BULLETPROOF_CHECKOUT_API_BASE_URL', 'https://bulletproofcheckout.net/API/endpoints/directpost/');
 define('BULLETPROOF_CHECKOUT_GATEWAY', 'BP');
 define('BULLETPROOF_CHECKOUT_FORMAT', 'raw');
 define('BULLETPROOF_BPCHECKOUT_GATEWAY', 'BPCHECKOUT');
@@ -20,7 +20,7 @@ if (!function_exists('pr')) {
 		print_r($val);
 		echo '</pre>';
 		if ($val2) {
-			echo $val2;
+			esc_html( $val2 );
 			die;
 		}
 	}
@@ -35,9 +35,16 @@ add_action('plugins_loaded', 'bulletproof_payment_integration');
  * Check if WooCommerce is active and include the necessary files.
  */
 function bulletproof_payment_integration() {
+	/**
+	 * Filter the active plugins to check if WooCommerce is active.
+	 *
+	 * @param array $active_plugins An array of active plugin filenames.
+	 * @return bool Whether WooCommerce is active or not.
+   */
 	if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
 		// Include the BulletProof Payment Gateway class file.
 		include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-payment-gateway-lite.php';
+		include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-shop-orders.php';
 	} else {
 		// Display an admin notice if WooCommerce is not active.
 		add_action('admin_notices', 'bulletproof_payment_gateway_plugin_notice');

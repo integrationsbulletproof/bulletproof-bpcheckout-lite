@@ -1,25 +1,43 @@
+.woocommerce-checkout .woocommerce{
+    max-width: 100%;
+}
 
-* {
-    box-sizing: border-box;
+.woocommerce-checkout.woocommerce-page input[type=radio].shipping_method~.payment_box, .woocommerce-checkout.woocommerce-page input[type=radio][name=payment_method]~.payment_box{
+    padding-left: 0;
 }
-.select-row{
-	display: flex;
-	flex-wrap: wrap;
+.date-year-section .select-row {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+}.w-33 {
+    width: 33%;
 }
-.bp-card-expiry{
-	-webkit-appearance: none;
-	appearance: none;
-    padding: 10px;
-    font-size: 14px;
+fieldset#wc-bulletproof_bpcheckout_lite-cc-form {
+    padding: 15px !important;
+    margin-top: 20px;
 }
-.select-col-half,.select-2-col-half{
-	width: 50%;
-	padding-right: 15px;
+.woocommerce-checkout.woocommerce #payment .form-row select, .woocommerce-checkout.woocommerce-page #payment .form-row select {
+    width: 100%;
+    height: 50px;
+    padding: 0 15px;
+    appearance: none;
+    background-image: url('../images/select-arrow.svg');
+    background-repeat: no-repeat;
+    background-size: 6px 5px;
+    background-position: right 1rem center;
 }
-.select-2-col-half{
-	padding-right: 0;
-	padding-left: 15px;
+.woocommerce-checkout .save-payment-checkbox {
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
 }
-.select-col-half .woocommerce #payment .form-row select, .woocommerce-page #payment .form-row select{
-	width: 100% !important;
+.woocommerce-checkout .save-payment-checkbox label{
+    margin: 0;
+}
+.date-year-section label, .form-row.form-row-wide label {
+    margin: 0 0 10px 0;
+}
+
+.save-payment-checkbox input {
+    margin-right: 10px;
 }
