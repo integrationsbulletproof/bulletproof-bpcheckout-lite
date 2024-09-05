@@ -73,8 +73,8 @@ if (!function_exists('bulletproof_add_content_thankyou')) {
         }
         if ((isset($_GET['gateway'])) && ($_GET['gateway'] != "")) {
             $gateway = strtoupper(sanitize_text_field($_GET['gateway']));
-            if (($gateway!="BP")&&($gateway!="PAYFAC")&&($gateway!="PAYFAC_FLEX")){
-                $gateway="";
+            if (($gateway != "BP") && ($gateway != "PAYFAC") && ($gateway != "PAYFAC_FLEX")) {
+                $gateway = "";
             }
         }
         if ((isset($_GET['3ds_approved'])) && ($_GET['3ds_approved'] != "")) {
@@ -104,6 +104,108 @@ if (!function_exists('bulletproof_add_content_thankyou')) {
         }
     }
 }
+
+// Handle order status changes
+add_action('woocommerce_order_status_changed', 'woo_order_status_change_bpcheckout_lite', 10, 3);
+if (!function_exists('woo_order_status_change_bpcheckout_lite')) {
+    function woo_order_status_change_bpcheckout_lite($order_id, $old_status, $new_status)
+    {
+        if ($old_status != "") {
+            $old_status = strtolower($old_status);
+        }
+        if ($new_status != "") {
+            $new_status = strtolower($new_status);
+        }
+
+        // If the order changes from completed to cancelled or refunded , then will trigger a refund on the gateway
+        //bulletproof_lite_gateway_api_refund_error
+
+        if (($order_id != "") && ($old_status == "completed") && (($new_status == "cancelled") || ($new_status == "refunded"))) {
+            error_log("Starting refund from the BulletProof Lite Plugin for the Order ID#:" . $order_id);
+            // Check if the order was paid using the BulletProof Lite plugin (or the BulletProof plus plugin)
+            $order = wc_get_order($order_id);
+            //|| ! $order->get_transaction_id()
+            if (! $order ||  !is_object($order)) {
+                error_log("Invalid Order " . $order_id . " received.");
+            } else {
+                $payment_method_used = $order->get_meta('_payment_method', true);
+
+                if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
+                    $date_completed = $order->get_date_completed();
+                    $datefrom = new DateTime($date_completed);
+                    $dateto = new DateTime();
+                    $days_diff = $datefrom->diff($dateto)->days;
+                    if ($days_diff < 30) {
+                        $lite_gateway = new Bulletproof_Payment_Gateway_Lite();
+                        $response_refund = $lite_gateway->process_refund($order_id, $order->get_total());
+
+                        if (is_wp_error($response_refund)) {
+
+                            $the_msg = "Order " . $order_id . " was not refunded.";
+
+                            $error_detail_on_gateway = "";
+
+                            if (isset($response_refund->errors['bulletproof_refund_api_error'][0])) {
+                                $error_detail_on_gateway = (string)$response_refund->errors['bulletproof_refund_api_error'][0];
+                                if ($error_detail_on_gateway != "") {
+                                    $the_msg .= ". Detail:" . $error_detail_on_gateway;
+                                }
+                            }
+                            error_log($the_msg);
+                            if ($error_detail_on_gateway != "") {
+                                $order->add_order_note("This order can not be refunded by BulletProof because " . $error_detail_on_gateway);
+                                $order->save();
+                            }
+                            return false;
+                        } else {
+                            $the_msg = "Order " . $order_id . " was refunded succesfully";
+                            error_log($the_msg);
+                            try {
+                                $current_user = wp_get_current_user();
+                            } catch (Exception $ex) {
+                                $current_user = "";
+                            }
+                            $order->update_meta_data('_cancel_by',  $current_user);
+                            $order->update_meta_data('_bulletproof_refunded',  true);
+                        }
+                    } else {
+                        error_log("Order " . $order_id . " is older than 30 days and can not be refunded in the Payment Gateway");
+                        $order->add_order_note("This order is older than 30 days and can not be refunded from the BulletProof Checkout Plugin, but the status in WooCommerce was changed to Cancelled");
+                        $order->save();
+                    }
+                } else {
+                    error_log("Order " . $order_id . " was not refunded by BulletProof because was originally paid with other payment gateway");
+                    $order->add_order_note("This order can not be refunded by BulletProof because was paid on another payment gateway");
+                    $order->save();
+                }
+            }
+        }
+    }
+}
+
+
+
+/**
+ * Function to display API error notices.
+ * This function displays any error notices generated during the settings save process.
+ */
+if (!function_exists('bulletproof_display_error_bulletproof_lite_gateway_api_refund_error')) {
+    function bulletproof_display_error_bulletproof_lite_gateway_api_refund_error()
+    {
+        // Display error notices
+        $message = get_transient('bulletproof_lite_gateway_api_refund_error');
+        if ($message) {
+?>
+            <div class="notice notice-error is-dismissible">
+                <p><?php esc_html($message); ?></p>
+            </div>
+<?php
+            // Delete the transient to avoid displaying the message again
+            delete_transient('bulletproof_lite_gateway_api_refund_error');
+        }
+    }
+}
+
 // Handle incoming messages to the checkout page
 add_action('woocommerce_before_checkout_form', 'bulletproof_payment_gateway_checkout_msg');
 if (!function_exists('bulletproof_payment_gateway_checkout_msg')) {

@@ -54,6 +54,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$this->api_key = $this->get_option('api_key');
 		$this->enable_vault = $this->get_option('save_payment_info');
 		$this->processor = $this->get_option('processor');
+		$this->supports           = array('products', 'refunds');
 		// Process admin options when saving payment gateway settings
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
@@ -251,6 +252,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 
 
+
 	/**
 	 * Function to validate API credentials when saving settings.
 	 * This function retrieves the API username and password from the settings form,
@@ -275,7 +277,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		}
 	}
 
-	private function bulletproof_display_notice($message, $message_type)
+	public function bulletproof_display_notice($message, $message_type)
 	{
 		if (!wc_has_notice(__($message, 'bulletproof-checkout-lite'), $message_type)) {
 			wc_add_notice(__($message, 'bulletproof-checkout-lite'), $message_type);
@@ -302,10 +304,10 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			$sale_method_found = $this->get_option('salemethod');
 			$order = new WC_Order($order_id);
 
-			$this->bulletproof_update_order_meta($order_id, $transaction_id);
+
+			$this->bulletproof_update_order_meta($order_id, $transaction_id, $order);
 			if ($sale_method_found == 'sale') {
 				$order->payment_complete();
-
 				$status_after_payment_completed = $this->get_option('status_after_order_completed');
 				if ($status_after_payment_completed == "") $status_after_payment_completed = "completed";
 				if ($status_after_payment_completed != "bp_donotchange") {
@@ -315,6 +317,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			} else {
 				$order->update_status('wc-on-hold');
 			}
+
+			$order->set_transaction_id($transaction_id);
 			$order->update_meta_data('_bulletproof_gateway_action_type', $sale_method_found);
 			$order->save();
 
@@ -356,6 +360,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		if (is_wp_error($response)) {
 			error_log('Refund API request failed: ' . $response->get_error_message());
 		} else {
+
 			$body = wp_remote_retrieve_body($response);
 			$decoded_response = json_decode($body, true);
 			return $decoded_response;
@@ -523,10 +528,13 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 	public function process_refund($order_id, $amount = null, $reason = '')
 	{
+		error_log('Starting refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount);
+
 		// Get the WooCommerce order.
 		$order = wc_get_order($order_id);
 		// Check if the order is valid.
-		if (!$order || !is_object($order)) {
+		//|| ! $order->get_transaction_id()
+		if (! $order ||  !is_object($order) || $amount <= 0) {
 			return new WP_Error('invalid_order', 'Invalid order.');
 		}
 		// Get API credentials and transaction ID.
@@ -543,33 +551,48 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		);
 
 		if ((strtolower($this->get_option('enabled')) == "yes")) {
-
-			// Locate the API endpoint to be used
-			$base_api_url = "";
-			try {
-				if ((strtolower($this->get_option('testmode')) == "no") || ($this->get_option('testmode') == "")) {
-					$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
-				} else {
-					$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX;
-				}
-			} catch (Exception $e) {
+			if ($transaction_id != "") {
+				// Locate the API endpoint to be used
 				$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
+				try {
+					if ((strtolower($this->get_option('testmode')) == "no") || ($this->get_option('testmode') == "")) {
+						$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
+					} else {
+						if (strtolower($this->get_option('testmode')) == "yes") {
+							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX;
+						}
+					}
+				} catch (Exception $e) {
+					$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
+				}
+
+				// Build the API URL with parameters.
+				$api_url = $base_api_url . 'refund.php?user=' . urlencode($username) .
+					'&pass=' . urlencode($password) .
+					'&security_key=' . urlencode($security_key) .
+					'&transactionid=' . urlencode($transaction_id);
+				// adds support for partial refunds
+				if ($amount != "") {
+					$api_url .= '&amount=' . $amount;
+				}
+
+				// Make the refund API call.
+				$response = $this->bulletproof_refund_payment_api($api_url, $request_args);
+				error_log(print_r($response, true));
+
+				if ((isset($response['error'])) && ($response['error'] != "")) {
+					error_log(print_r($response['error'], true));
+					return new WP_Error('bulletproof_refund_api_error', $response['error']);
+				} else {
+					// $order->update_status('refunded');
+					// $order->add_order_note('Refunded via BulletProof Checkout.');
+					return true;
+				}
+			} else {
+				$the_msg = "Refund was not made due to missed transaction id";
+				error_log(print_r($the_msg, true));
+				return new WP_Error('bulletproof_no_transaction_id', $the_msg);
 			}
-
-			// Build the API URL with parameters.
-			$api_url = $base_api_url . 'refund.php?user=' . urlencode($username) .
-				'&pass=' . urlencode($password) .
-				'&security_key=' . urlencode($security_key) .
-				'&transactionid=' . urlencode($transaction_id);
-
-			// Make the refund API call.
-			$response = $this->bulletproof_refund_payment_api($api_url, $request_args);
-			error_log(print_r($response, true));
-
-			// $order->update_status('refunded');
-			// $order->add_order_note('Refunded via BulletProof Checkout.');
-
-			return true;
 		} else {
 			$the_msg = "Refund endpoint not available due to the Payment Gateway is disabled";
 			error_log(print_r($the_msg, true));
@@ -666,7 +689,6 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 			// Validate card security code length.
 			if (!preg_match('/^\d{3,4}$/', $card_cvv)) {
-
 				self::bulletproof_display_notice('Card security code is invalid (wrong length).', 'error');
 				return false;
 			}
@@ -835,7 +857,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	 * @param string $transaction_id The transaction ID.
 	 */
 
-	public function bulletproof_update_order_meta($order_id, $transaction_id)
+	public function bulletproof_update_order_meta($order_id, $transaction_id, $order = "")
 	{
 		// Get the current date and time.
 		$order_date = gmdate('Y-m-d H:i:s');
@@ -845,7 +867,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$unix_format_date = strtotime(gmdate('Y-m-d H:i:s'));
 		$random_naunce_key = $this->bulletproof_generate_random_string();
 
-		$order = wc_get_order($order_id);
+		if ($order == "") {
+			$order = wc_get_order($order_id);
+		}
 		// Update various order meta data.
 
 		$order->update_meta_data('_bulletproof_gateway_action_type_sale', $order_date);
@@ -977,6 +1001,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			return;
 		}
 
+		$the_amount = $order->get_total();
+
 		// Build an array of sale authorization parameters.
 		$sale_auth_params = array(
 			'sale_auth_only' => $sale_method,
@@ -987,7 +1013,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'ccnumber' => $ccnum,
 			'ccexp' => $ccexp,
 			'cvv' => $card_cvv,
-			'amount' => number_format($order->get_total(), 2, '.', ''),
+			'amount' => number_format($the_amount, 2, '.', ''),
+			'tax' => number_format($order->get_total_tax(), 2, '.', ''),
+			'shipping' => number_format($order->get_shipping_total(), 2, '.', ''),
 			'orderid' => $order_id,
 			'format' => BULLETPROOF_CHECKOUT_FORMAT,
 			'approval_url' => $this->get_return_url($order),
@@ -1023,6 +1051,29 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			$surcharge_array = array("surcharge_amount" => $surcharge_amount);
 			$sale_auth_params = array_merge($sale_auth_params, $surcharge_array);
 		}
+		// Add any Merchant defined field, merchant defined fields available are #10,11 and 12
+
+		// Stores any extra fee in the Merchant defined field 10
+		$fees = $order->get_fees();
+		$fees_total = 0;
+		$fees_titles = "";
+		foreach ($fees as $key => $fee) {
+			if ((isset($fee['name'])) && (isset($fee['total'])) && ($fee['name'] != "") && ($fee['total'] != "")) {
+				if ((strtolower($fee['name']) == "technology fees") || (strtolower($fee['name']) == "technology fee") || (strtolower($fee['name']) == "surcharge")) {
+					$surcharge_amount = $surcharge_amount + $fee['total'];
+				} else {
+					// any other fee will be sum
+					if ($fees_titles != "") $fees_titles .= ",";
+					$fees_titles .= urlencode($fee['name']);
+					$fees_total = $fees_total + $fee['total'];
+				}
+			}
+		}
+		// If some fees are present, then will register those extra fees as part of a merchant defined fields
+		if ($fees_total > 0) {
+			$sale_auth_params = array_merge($sale_auth_params, array("merchant_defined_field_10" => "Extra fees:" . $fees_titles . "=" . $fees_total));
+		}
+
 		return $sale_auth_params;
 	}
 
