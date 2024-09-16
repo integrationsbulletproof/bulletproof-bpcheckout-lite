@@ -19,7 +19,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	public $description = "";
 	public $processor = "";
 	public $supports = array(
-		'products',
+		'products','refunds'
 	);
 	/**
 	 * Constructor function to initialize the payment gateway settings.

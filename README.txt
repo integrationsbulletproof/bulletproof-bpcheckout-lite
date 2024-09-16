@@ -3,7 +3,7 @@ Contributors: bulletproofcheckout
 Tags: woocommerce, 3DS, payment gateway, bulletproof, NMI
 Requires at least: 4.0
 Tested up to: 6.5.4
-Stable tag: 1.0.0
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -97,6 +97,7 @@ Preventing a chargeback avoids the following:
 - Amazing 3DS chargeback prevention, adjustable 3DS settings, and take control over the customer checkout experience.
 - Sale, authorization, subscription, and order processing.
 - Collect payments inside and outside of WooCommerce.
+- Refund via Dashboard: Process full or partial refunds, directly from your WordPress dashboard. 
 
 
 == Plus Version ==
