@@ -19,7 +19,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	public $description = "";
 	public $processor = "";
 	public $supports = array(
-		'products','refunds'
+		'products',
+		'refunds'
 	);
 	/**
 	 * Constructor function to initialize the payment gateway settings.
@@ -46,15 +47,13 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$this->init_settings();
 		$this->title = $this->get_option('title');
 		$this->description = $this->get_option('description');
-		//$this->supports = array(
-		//		'products',
-		//	);
 		$this->enabled = $this->get_option('enabled');
 		$this->testmode = 'yes' === $this->get_option('testmode');
 		$this->api_key = $this->get_option('api_key');
 		$this->enable_vault = $this->get_option('save_payment_info');
 		$this->processor = $this->get_option('processor');
-		$this->supports           = array('products', 'refunds');
+		$this->supports = array('products', 'refunds');
+
 		// Process admin options when saving payment gateway settings
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
 
@@ -889,6 +888,20 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$order->save();
 	}
 
+	// String operations functions
+	public static function left($str, $length)
+	{
+		return substr($str, 0, $length);
+	}
+
+	public static function right($str, $length)
+	{
+		if ($str != "") {
+			return substr($str, -$length);
+		} else {
+			return "";
+		}
+	}
 
 	/**
 	 * Generates sale authorization parameters for the BulletProof API.
@@ -1002,8 +1015,42 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		}
 
 		$the_amount = $order->get_total();
+		$the_country = $order->get_billing_country();
+		$the_country_shipping = $order->get_shipping_country();
+		try {
+			$the_state = $order->get_billing_state();
+		} catch (Exception $e) {
+			$the_state = "";
+		}
+
+		try {
+			$the_state_shipping = $order->get_shipping_state();
+		} catch (Exception $e) {
+			$the_state_shipping = "";
+		}
+
+
+		// patch for remove value format XX-AA in some countries
+		if (($the_state != '') && ($the_country != '')) {
+			if (strpos($the_state, $the_country . "-")>=0) {
+				$the_state = str_replace($the_country . "-", "", $the_state);
+			}
+		}
+		if (($the_state_shipping != '') && ($the_country_shipping != '')) {
+			if (strpos($the_state_shipping, $the_country_shipping . "-") >=0) {
+				$the_state_shipping = str_replace($the_country_shipping . "-", "", $the_state_shipping);
+			}
+		}
+		// check if state is longer than 3 characters
+		if (strlen($the_state) > 3) {
+			$the_state = $this->left($the_state, 3);
+		}
+		if (strlen($the_state_shipping) > 3) {
+			$the_state_shipping = $this->left($the_state_shipping, 3);
+		}
 
 		// Build an array of sale authorization parameters.
+		// The parameter fix_iso_codes will ignore any country or state which is not on ISO format
 		$sale_auth_params = array(
 			'sale_auth_only' => $sale_method,
 			'gateway' => BULLETPROOF_CHECKOUT_GATEWAY,
@@ -1029,9 +1076,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'billing_address_address1' => $order->get_billing_address_1(),
 			'billing_address_address2' => $order->get_billing_address_2(),
 			'billing_address_city' => $order->get_billing_city(),
-			'billing_address_state' => $order->get_billing_state(),
+			'billing_address_state' => $the_state,
 			'billing_address_zip' => $order->get_billing_postcode(),
-			'billing_address_country' => $order->get_billing_country(),
+			'billing_address_country' => $the_country,
 			'billing_address_phone' => $order->get_billing_phone(),
 			'billing_address_email' => $order->get_billing_email(),
 			'shipping_address_first_name' => $order->get_shipping_first_name(),
@@ -1039,12 +1086,16 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'shipping_address_address1' => $order->get_shipping_address_1(),
 			'shipping_address_address2' => $order->get_shipping_address_2(),
 			'shipping_address_city' => $order->get_shipping_city(),
-			'shipping_address_state' => $order->get_shipping_state(),
+			'shipping_address_state' => $the_state_shipping,
 			'shipping_address_zip' => $order->get_shipping_postcode(),
-			'shipping_address_country' => $order->get_shipping_country(),
+			'shipping_address_country' => $the_country_shipping,
 			'source_override' => 'WOOCOMMERCELITE',
+			'fix_iso_codes'=> 'true'
 		);
 
+
+		
+		
 		// Adds line item information
 		$sale_auth_params = array_merge($sale_auth_params, $item_array);
 		if ($surcharge_amount > 0) {
