@@ -7,10 +7,12 @@
  * Version: 1.0.8
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
- * License: GPLv2 or later
+ * License: GPLv3
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
  * WC tested up to: 9.3.2
+ * Tested up to: 6.6.2
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  */
@@ -31,7 +33,7 @@ if (!defined('BULLETPROOF_CHECKOUT_FORMAT')) define('BULLETPROOF_CHECKOUT_FORMAT
 if (!defined('BULLETPROOF_BPCHECKOUT_GATEWAY')) define('BULLETPROOF_BPCHECKOUT_GATEWAY', 'BPCHECKOUT');
 // If the Official Mobile App will be used then will need to disable BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS
 // In the Official Mobile App BulletProof does not support Authorize and Capture later
-if (!defined('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS')) define('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS', true);
+if (!defined('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS')) define('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS', false);
 // Some hosting providers auto-enabled JetPack SSO whih is buggy with the Official Mobile App
 if (!defined('BULLETPROOF_CHECKOUT_DISABLEJETPACKSSO')) define('BULLETPROOF_CHECKOUT_DISABLEJETPACKSSO', false);
 
@@ -135,3 +137,6 @@ if (!function_exists('bulletproof_gateway_lite_2024_visitweb')) {
 		return $settings;
 	}
 }
+
+		
+

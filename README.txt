@@ -166,7 +166,7 @@ We can also provide a cost-effective merchant account and integrate it into Bull
 Contact info@bulletproof-checkout.com
 
 ### Countries Served
-- Currently we support US, CA, and UK
+- Currently we support US, CA, and UK. We receive Credit Cards Worlwide.
 
 
 ### What are the requirements or paperwork needed?
@@ -190,6 +190,8 @@ For any technical support or integration questions contact support@bulletproof-c
 ### Where can I get API credentials? 
 - You need to sign up for an account with BulletProof and obtain API credentials.  Contact docs@bulletproof-checkout.com 
 
+### Compatibility issues 
+- If you have enabled JetPack and will use the WooCommerce Mobile App you will need to disable the JetPack notifications in the page wp-admin/admin.php?page=jetpack_modules
 
 == Changelog ==
 

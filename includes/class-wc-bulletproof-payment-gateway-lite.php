@@ -22,12 +22,14 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		'products',
 		'refunds'
 	);
+	public $allowed_card_types =array('visa','mastercard','amex','discover'); // other options jcb , diners-club
 	/**
 	 * Constructor function to initialize the payment gateway settings.
 	 */
 	public function __construct()
 	{
 
+		
 		// Define basic information about the payment gateway.
 		//$this->id = 'bulletproof_bpcheckout_lite';
 		//$this->method_title = 'Bulletproof Payment Gateway Lite';
@@ -251,6 +253,37 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 
 
+
+	
+	/**
+	 * get_icon function.
+	 *
+	 * @access public
+	 * @return string
+	 */
+	public function get_icon() {
+		$icon = '';
+        if ( in_array( 'visa', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/visa.svg' ) . '" alt="Visa" width="32" />';
+        }
+        if ( in_array( 'mastercard', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/mastercard.svg' ) . '" alt="Mastercard" width="32" />';
+        }
+        if ( in_array( 'amex', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/amex.svg' ) . '" alt="Amex" width="32" />';
+        }
+        if ( in_array( 'discover', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/discover.svg' ) . '" alt="Discover" width="32" />';
+        }
+        if ( in_array( 'jcb', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/jcb.svg' ) . '" alt="JCB" width="32" />';
+        }
+        if ( in_array( 'diners-club', $this->allowed_card_types ) ) {
+            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/diners.svg' ) . '" alt="Diners Club" width="32" />';
+        }
+
+        return apply_filters( 'woocommerce_gateway_icon', $icon, $this->id );
+	}
 
 	/**
 	 * Function to validate API credentials when saving settings.
@@ -675,7 +708,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			$card_expiration_year  = $this->bulletproof_get_post(esc_attr($this->id) . '_card_expiry_year');
 
 			// Validate card number.
-			if (empty($card_number) || !ctype_digit($card_number) || !preg_match('/^\d{16}$/', $card_number)) {
+			if (empty($card_number) || !ctype_digit($card_number) || !preg_match('/^\d{14,19}$/', $card_number)) {
 				self::bulletproof_display_notice('Card number is invalid.', 'error');
 				return false;
 			}
@@ -1050,7 +1083,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		}
 
 		// Build an array of sale authorization parameters.
-		// The parameter fix_iso_codes will ignore any country or state which is not on ISO format
+		// The parameter fix_iso_codes will ignore states (which are not on ISO format)
 		$sale_auth_params = array(
 			'sale_auth_only' => $sale_method,
 			'gateway' => BULLETPROOF_CHECKOUT_GATEWAY,
