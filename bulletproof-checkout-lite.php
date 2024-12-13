@@ -4,7 +4,7 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Receive Credit Card payments using the Lite version of the BulletProof Gateway.
- * Version: 1.0.8
+ * Version: 1.0.9
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
@@ -26,7 +26,6 @@ if (!defined('ABSPATH')) {
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL')) define('BULLETPROOF_CHECKOUT_API_BASE_URL', 'https://bulletproofcheckout.net/API/endpoints/directpost/');
 // Sandbox Endpoint - Transactions on sandbox are not registered in the portal
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX', 'https://bulletproofcheckout.net/APIsandbox/endpoints/directpost/');
-
 
 if (!defined('BULLETPROOF_CHECKOUT_GATEWAY')) define('BULLETPROOF_CHECKOUT_GATEWAY', 'BP');
 if (!defined('BULLETPROOF_CHECKOUT_FORMAT')) define('BULLETPROOF_CHECKOUT_FORMAT', 'raw');

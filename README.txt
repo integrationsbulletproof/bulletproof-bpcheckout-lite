@@ -133,7 +133,7 @@ Preventing a chargeback avoids the following:
 2. Customers provide necessary payment details and complete the order.
 3. The plugin processes the payment through the BulletProof API.
 4. Order status is updated based on the BulletProof API response.
-5. Refunds and Voids are only available in the BulletProof portal, any refund or void at the WooCommerce level will not trigger the action in the gateway (this is available automated in the plugin PLUS version)
+5. Voids are only available in the BulletProof portal, any refund or void manually at the BulletProof portal will not be reflected on WooCommerce (this is available automated in the plugin PLUS version)
 6. Any change in the payment at the BulletProof portal (ex. a refund) will not be reflected in the order status on WooCommerce (this is available automated in the plugin PLUS version)
 
 == Frequently Asked Questions ==
@@ -164,6 +164,9 @@ We have addressed the most common reasons why merchants have yet to entirely emb
 We can also provide a cost-effective merchant account and integrate it into BulletProof without any effort on your end.
 
 Contact info@bulletproof-checkout.com
+
+### The plugin supports the Official WooCommerce Mobile App?
+- Yes
 
 ### Countries Served
 - Currently we support US, CA, and UK. We receive Credit Cards Worlwide.
@@ -200,5 +203,5 @@ Initial release
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release of BulletProof Payment Gateway.
+= 1.0.9 =
+Added support for merchants with and without 3DS

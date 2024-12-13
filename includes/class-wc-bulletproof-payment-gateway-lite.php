@@ -22,14 +22,14 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		'products',
 		'refunds'
 	);
-	public $allowed_card_types =array('visa','mastercard','amex','discover'); // other options jcb , diners-club
+	public $allowed_card_types = array('visa', 'mastercard', 'amex', 'discover'); // other options jcb , diners-club
 	/**
 	 * Constructor function to initialize the payment gateway settings.
 	 */
 	public function __construct()
 	{
 
-		
+
 		// Define basic information about the payment gateway.
 		//$this->id = 'bulletproof_bpcheckout_lite';
 		//$this->method_title = 'Bulletproof Payment Gateway Lite';
@@ -254,35 +254,36 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 
 
-	
+
 	/**
 	 * get_icon function.
 	 *
 	 * @access public
 	 * @return string
 	 */
-	public function get_icon() {
+	public function get_icon()
+	{
 		$icon = '';
-        if ( in_array( 'visa', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/visa.svg' ) . '" alt="Visa" width="32" />';
-        }
-        if ( in_array( 'mastercard', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/mastercard.svg' ) . '" alt="Mastercard" width="32" />';
-        }
-        if ( in_array( 'amex', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/amex.svg' ) . '" alt="Amex" width="32" />';
-        }
-        if ( in_array( 'discover', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/discover.svg' ) . '" alt="Discover" width="32" />';
-        }
-        if ( in_array( 'jcb', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/jcb.svg' ) . '" alt="JCB" width="32" />';
-        }
-        if ( in_array( 'diners-club', $this->allowed_card_types ) ) {
-            $icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url( WC()->plugin_url() . '/assets/images/icons/credit-cards/diners.svg' ) . '" alt="Diners Club" width="32" />';
-        }
+		if (in_array('visa', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/visa.svg') . '" alt="Visa" width="32" />';
+		}
+		if (in_array('mastercard', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/mastercard.svg') . '" alt="Mastercard" width="32" />';
+		}
+		if (in_array('amex', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/amex.svg') . '" alt="Amex" width="32" />';
+		}
+		if (in_array('discover', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/discover.svg') . '" alt="Discover" width="32" />';
+		}
+		if (in_array('jcb', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/jcb.svg') . '" alt="JCB" width="32" />';
+		}
+		if (in_array('diners-club', $this->allowed_card_types)) {
+			$icon .= '<img style="margin-left: 0.3em" src="' . WC_HTTPS::force_https_url(WC()->plugin_url() . '/assets/images/icons/credit-cards/diners.svg') . '" alt="Diners Club" width="32" />';
+		}
 
-        return apply_filters( 'woocommerce_gateway_icon', $icon, $this->id );
+		return apply_filters('woocommerce_gateway_icon', $icon, $this->id);
 	}
 
 	/**
@@ -332,10 +333,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$transaction_id = isset($_GET['transactionid']) ? intval($_GET['transactionid']) : 0;
 		// Code for processing payment responses based on query parameters.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
+
+		// Non-3DS customers also will be able to update their postmeta information
+		//if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
+		if (!empty($order_id) && !empty($transaction_id) && ($transaction_id != "0")) {
 			$sale_method_found = $this->get_option('salemethod');
 			$order = new WC_Order($order_id);
-
 
 			$this->bulletproof_update_order_meta($order_id, $transaction_id, $order);
 			if ($sale_method_found == 'sale') {
@@ -347,7 +350,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				}
 				wc_maybe_reduce_stock_levels($order_id);
 			} else {
-				$order->update_status('wc-on-hold');
+				if ($sale_method_found == "") {
+					$the_msg = "No sale was found, please contact the Gateway Support Team";
+				} else {
+					$the_msg = 'Status updated by the BulletProof Plugin due to sale method found is:' . $sale_method_found . '. ';
+				}
+				$order->update_status('wc-on-hold', __($the_msg, 'bulletproof-checkout-lite'));
 			}
 
 			$order->set_transaction_id($transaction_id);
@@ -560,7 +568,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 	public function process_refund($order_id, $amount = null, $reason = '')
 	{
-		error_log('Starting refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount);
+
 
 		// Get the WooCommerce order.
 		$order = wc_get_order($order_id);
@@ -581,6 +589,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			),
 			'body' => '',
 		);
+
+		error_log('Executing refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount);
 
 		if ((strtolower($this->get_option('enabled')) == "yes")) {
 			if ($transaction_id != "") {
@@ -618,6 +628,75 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				} else {
 					// $order->update_status('refunded');
 					// $order->add_order_note('Refunded via BulletProof Checkout.');
+
+					$the_msg = "Order " . $order_id . " was refunded succesfully";
+
+					error_log($the_msg);
+					//error_log($response_refund);
+					try {
+						$current_user = wp_get_current_user();
+					} catch (Exception $ex) {
+						$current_user = "";
+					}
+					$the_username = "";
+					if (isset($current_user->user_login)) {
+						$the_username = $current_user->user_login;
+					} else {
+						if (isset($current_user)) {
+							$the_username = $current_user;
+						} else {
+							$the_username = "";
+						}
+					}
+					$order->update_meta_data('_cancel_by', $the_username);
+					$order->update_meta_data('_bulletproof_refunded', true);
+					// json array for register refund transactions 
+					//	if (is_string($response)) {
+					$refund_transactionid = "";
+					if ((isset($response->action)) && ($response->action == "refund")) {
+						if ((isset($response->data))) {
+							$data_to_store = $response->data;
+						} else {
+							$data_to_store = $response;
+						}
+					} else {
+						if ((isset($response['action'])) && ($response['action'] == "refund")) {
+							if ((isset($response['data']))) {
+								$data_to_store = $response['data'];
+								if (strpos($data_to_store, "&") > 0) {
+									parse_str($data_to_store, $result_array);
+									if ((isset($result_array['transactionid'])) && ($result_array['transactionid'] != "")) {
+										if ($transaction_id != $result_array['transactionid']) {
+											$refund_transactionid = $result_array['transactionid'];
+										}
+										if ((isset($result_array['type'])) && ($result_array['type'] == "void")) {
+											$order->update_meta_data('_bulletproof_voided', true);
+										}
+									}
+								}
+							} else {
+								$data_to_store = $response;
+							}
+						} else {
+							$data_to_store = $response;
+						}
+					}
+					$order->update_meta_data('_bulletproof_refund_response', $data_to_store);
+					$order->update_meta_data('_bulletproof_refund_response_flag', "2");
+					//	}
+					// json array for register refund transactions 
+					if (($refund_transactionid != $transaction_id) &&($refund_transactionid!="")){
+						$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
+						if ($transaction_id_refunds != "") {
+							$refund_ids_array = json_decode($transaction_id_refunds, true);
+						} else {
+							$refund_ids_array = array();
+						}
+						array_push($refund_ids_array,$refund_transactionid);
+						$order->update_meta_data('_payment_gateway_tx_refunds', json_encode($refund_ids_array));
+					}
+					$order->save();
+					
 					return true;
 				}
 			} else {
@@ -1065,12 +1144,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 		// patch for remove value format XX-AA in some countries
 		if (($the_state != '') && ($the_country != '')) {
-			if (strpos($the_state, $the_country . "-")>=0) {
+			if (strpos($the_state, $the_country . "-") >= 0) {
 				$the_state = str_replace($the_country . "-", "", $the_state);
 			}
 		}
 		if (($the_state_shipping != '') && ($the_country_shipping != '')) {
-			if (strpos($the_state_shipping, $the_country_shipping . "-") >=0) {
+			if (strpos($the_state_shipping, $the_country_shipping . "-") >= 0) {
 				$the_state_shipping = str_replace($the_country_shipping . "-", "", $the_state_shipping);
 			}
 		}
@@ -1123,12 +1202,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'shipping_address_zip' => $order->get_shipping_postcode(),
 			'shipping_address_country' => $the_country_shipping,
 			'source_override' => 'WOOCOMMERCELITE',
-			'fix_iso_codes'=> 'true'
+			'fix_iso_codes' => 'true'
 		);
 
 
-		
-		
+
+
 		// Adds line item information
 		$sale_auth_params = array_merge($sale_auth_params, $item_array);
 		if ($surcharge_amount > 0) {

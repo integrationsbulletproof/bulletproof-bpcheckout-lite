@@ -77,6 +77,7 @@ if (!function_exists('bulletproof_add_content_thankyou')) {
                 $gateway = "";
             }
         }
+        $auth_approved="";
         if ((isset($_GET['3ds_approved'])) && ($_GET['3ds_approved'] != "")) {
             $auth_approved = strtolower(sanitize_text_field($_GET['3ds_approved']));
             if (($auth_approved != "yes") && ($auth_approved != "no")) {

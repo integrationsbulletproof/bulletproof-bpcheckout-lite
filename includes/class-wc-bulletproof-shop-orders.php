@@ -7,6 +7,8 @@ if (!defined('ABSPATH')) {
 class Bulletproof_Shop_Orders
 {
 
+	public $settings = "";
+
 	/**
 	 * Constructor function to initialize the shop orders settings.
 	 */
@@ -34,7 +36,7 @@ class Bulletproof_Shop_Orders
 		add_filter('woocommerce_shipping_fields', array($this, 'bp_unrequire_wc_shipping_state_field'));
 		add_filter('woocommerce_billing_fields', array($this, 'bp_unrequire_wc_billing_state_field'));
 		add_filter('woocommerce_states', array($this, 'bp_filter_woocommerce_states'), 10, 1);
-
+		add_filter('woocommerce_default_address_fields', array($this, 'bp_remove_state_validation'));
 
 		if (BULLETPROOF_CHECKOUT_DISABLEJETPACKSSO) {
 			// JetPack SSO is a module auto-enabled in some hosting providers like Bluehost which 
@@ -53,14 +55,17 @@ class Bulletproof_Shop_Orders
 		}
 	}
 
+	public function bp_remove_state_validation($fields)
+	{
+
+		$fields['state']['required'] = false;
+		$fields['billing']['state']['required'] = false;
+		$fields['shipping']['state']['required'] = false;
+		return $fields;
+	}
+
 	public function bp_filter_woocommerce_states($states)
 	{
-		foreach ($states as $state_key => $state_value) {
-			$states[$state_key]['hidden'] = false;
-		}
-
-
-
 
 
 		// Add all the states missed by Woo 
@@ -210,7 +215,7 @@ class Bulletproof_Shop_Orders
 			'5' => __('South West', 'woocommerce'),
 			'3' => __('North West', 'woocommerce')
 		);
-		$states['Sk'] = array(
+		$states['SK'] = array(
 			'BC' => __('Banská Bystrica Region', 'woocommerce'),
 			'KI' => __('Košice Region', 'woocommerce'),
 			'PV' => __('Prešov Region', 'woocommerce'),
@@ -618,26 +623,26 @@ class Bulletproof_Shop_Orders
 			'LU' => __('Canton of Luxembourg', 'woocommerce')
 		);
 		$states['SE'] = array(
-			'X' => __('Gävleborg County', 'woocommerce'),
+			'X' => __('Gavleborg County', 'woocommerce'),
 			'W' => __('Dalarna County', 'woocommerce'),
-			'S' => __('Värmland County', 'woocommerce'),
-			'E' => __('Östergötland County', 'woocommerce'),
+			'S' => __('Varmland County', 'woocommerce'),
+			'E' => __('Ostergotland County', 'woocommerce'),
 			'K' => __('Blekinge County', 'woocommerce'),
 			'BD' => __('Norrbotten County', 'woocommerce'),
-			'T' => __('Örebro County', 'woocommerce'),
-			'D' => __('Södermanland County', 'woocommerce'),
-			'M' => __('Skåne County', 'woocommerce'),
+			'T' => __('Orebro County', 'woocommerce'),
+			'D' => __('Sodermanland County', 'woocommerce'),
+			'M' => __('Skane County', 'woocommerce'),
 			'G' => __('Kronoberg County', 'woocommerce'),
-			'AC' => __('Västerbotten County', 'woocommerce'),
+			'AC' => __('Vasterbotten County', 'woocommerce'),
 			'H' => __('Kalmar County', 'woocommerce'),
 			'C' => __('Uppsala County', 'woocommerce'),
 			'I' => __('Gotland County', 'woocommerce'),
-			'O' => __('Västra Götaland County', 'woocommerce'),
+			'O' => __('Vastra Gotaland County', 'woocommerce'),
 			'N' => __('Halland County', 'woocommerce'),
-			'U' => __('Västmanland County', 'woocommerce'),
-			'F' => __('Jönköping County', 'woocommerce'),
+			'U' => __('Vastmanland County', 'woocommerce'),
+			'F' => __('Jonkoping County', 'woocommerce'),
 			'AB' => __('Stockholm County', 'woocommerce'),
-			'Y' => __('Västernorrland County', 'woocommerce')
+			'Y' => __('Vasternorrland County', 'woocommerce')
 		);
 		$states['PL'] = array(
 			'OP' => __('Opole Voivodeship', 'woocommerce'),
@@ -653,7 +658,7 @@ class Bulletproof_Shop_Orders
 			'ZP' => __('West Pomeranian Voivodeship', 'woocommerce'),
 			'WP' => __('Greater Poland Voivodeship', 'woocommerce'),
 			'MA' => __('Lesser Poland Voivodeship', 'woocommerce'),
-			'LD' => __('Lód´z Voivodeship', 'woocommerce'),
+			'LD' => __('Lod z Voivodeship', 'woocommerce'),
 			'MZ' => __('Masovian Voivodeship', 'woocommerce'),
 			'LU' => __('Lublin Voivodeship', 'woocommerce')
 		);
@@ -666,7 +671,7 @@ class Bulletproof_Shop_Orders
 			'20' => __('Açores', 'woocommerce'),
 			'17' => __('Vila Real', 'woocommerce'),
 			'1' => __('Aveiro', 'woocommerce'),
-			'7' => __('Évora', 'woocommerce'),
+			'7' => __('Evora', 'woocommerce'),
 			'18' => __('Viseu', 'woocommerce'),
 			'14' => __('Santarém', 'woocommerce'),
 			'8' => __('Faro', 'woocommerce'),
@@ -798,43 +803,43 @@ class Bulletproof_Shop_Orders
 		$states['IS'] = array(
 			'2' => __('Southern Peninsula Region', 'woocommerce'),
 			'1' => __('Capital Region', 'woocommerce'),
-			'4' => __('Westfjords', 'woocommerce'),
 			'7' => __('Eastern Region', 'woocommerce'),
 			'8' => __('Southern Region', 'woocommerce'),
+			'6' => __('Northeastern Region', 'woocommerce'),
 			'5' => __('Northwestern Region', 'woocommerce'),
 			'3' => __('Western Region', 'woocommerce'),
-			'6' => __('Northeastern Region', 'woocommerce')
+			'4' => __('Westfjords', 'woocommerce')
 		);
 		$states['FR'] = array(
-			'BL' => __('Saint-Barthélemy', 'woocommerce'),
-			'NAQ' => __('Nouvelle-Aquitaine', 'woocommerce'),
-			'IDF' => __('Île-de-France', 'woocommerce'),
-			'976' => __('Mayotte', 'woocommerce'),
-			'ARA' => __('Auvergne-Rhône-Alpes', 'woocommerce'),
-			'OCC' => __('Occitanie', 'woocommerce'),
-			'PDL' => __('Pays-de-la-Loire', 'woocommerce'),
-			'NOR' => __('Normandie', 'woocommerce'),
-			'20R' => __('Corse', 'woocommerce'),
-			'BRE' => __('Bretagne', 'woocommerce'),
-			'MF' => __('Saint-Martin', 'woocommerce'),
-			'WF' => __('Wallis and Futuna', 'woocommerce'),
-			'6AE' => __('Alsace', 'woocommerce'),
-			'PAC' => __('Provence-Alpes-Côte-d Azur', 'woocommerce'),
-			'75C' => __('Paris', 'woocommerce'),
-			'CVL' => __('Centre-Val de Loire', 'woocommerce'),
-			'GES' => __('Grand-Est', 'woocommerce'),
-			'PM' => __('Saint Pierre and Miquelon', 'woocommerce'),
-			'973' => __('French Guiana', 'woocommerce'),
-			'974' => __('La Réunion', 'woocommerce'),
-			'PF' => __('French Polynesia', 'woocommerce'),
-			'BFC' => __('Bourgogne-Franche-Comté', 'woocommerce'),
-			'972' => __('Martinique', 'woocommerce'),
-			'HDF' => __('Hauts-de-France', 'woocommerce'),
-			'971' => __('Guadeloupe', 'woocommerce'),
 			'01' => __('Ain', 'woocommerce'),
 			'02' => __('Aisne', 'woocommerce'),
 			'03' => __('Allier', 'woocommerce'),
 			'04' => __('Alpes-de-Haute-Provence', 'woocommerce'),
+			'6AE' => __('Alsace', 'woocommerce'),
+			'ARA' => __('Auvergne-Rhône-Alpes', 'woocommerce'),
+			'BFC' => __('Bourgogne-Franche-Comté', 'woocommerce'),
+			'BRE' => __('Bretagne', 'woocommerce'),
+			'CVL' => __('Centre-Val de Loire', 'woocommerce'),
+			'20R' => __('Corse', 'woocommerce'),
+			'973' => __('French Guiana', 'woocommerce'),
+			'PF' => __('French Polynesia', 'woocommerce'),
+			'GES' => __('Grand-Est', 'woocommerce'),
+			'IDF' => __('Île-de-France', 'woocommerce'),
+			'974' => __('La Réunion', 'woocommerce'),
+			'976' => __('Mayotte', 'woocommerce'),
+			'NOR' => __('Normandie', 'woocommerce'),
+			'NAQ' => __('Nouvelle-Aquitaine', 'woocommerce'),
+			'OCC' => __('Occitanie', 'woocommerce'),
+			'75C' => __('Paris', 'woocommerce'),
+			'PDL' => __('Pays-de-la-Loire', 'woocommerce'),
+			'PAC' => __('Provence-Alpes-Côte-d Azur', 'woocommerce'),
+			'PM' => __('Saint Pierre and Miquelon', 'woocommerce'),
+			'BL' => __('Saint-Barthélemy', 'woocommerce'),
+			'MF' => __('Saint-Martin', 'woocommerce'),
+			'WF' => __('Wallis and Futuna', 'woocommerce'),
+			'972' => __('Martinique', 'woocommerce'),
+			'HDF' => __('Hauts-de-France', 'woocommerce'),
+			'971' => __('Guadeloupe', 'woocommerce'),
 			'05' => __('Hautes-Alpes', 'woocommerce'),
 			'06' => __('Alpes-Maritimes', 'woocommerce'),
 			'07' => __('Ardèche', 'woocommerce'),
@@ -1122,24 +1127,23 @@ class Bulletproof_Shop_Orders
 		);
 
 
-
-
-
+		foreach ($states as $state_key => $state_value) {
+			$states[$state_key]['hidden'] = false;
+			$states[$state_key]['required'] = false;
+		}
 		return $states;
 	}
 
-
-
 	public function bp_unrequire_wc_billing_state_field($fields)
 	{
-		$fields['billing_state']['required'] = true;
+		$fields['billing_state']['required'] = false;
 		$fields['billing_state']['hidden'] = false;
 		return $fields;
 	}
 
 	public function bp_unrequire_wc_shipping_state_field($fields)
 	{
-		$fields['shipping_state']['required'] = true;
+		$fields['shipping_state']['required'] = false;
 		$fields['shipping_state']['hidden'] = false;
 		return $fields;
 	}
@@ -1284,7 +1288,6 @@ class Bulletproof_Shop_Orders
 		}
 
 		// If the order changes from completed to cancelled or refunded , then will trigger a refund on the gateway
-		//bulletproof_lite_gateway_api_refund_error
 
 		if (($order_id != "") && ($old_status == "completed") && (($new_status == "cancelled") || ($new_status == "refunded"))) {
 			error_log("Starting refund from the BulletProof Lite Plugin for the Order ID#:" . $order_id);
@@ -1295,7 +1298,7 @@ class Bulletproof_Shop_Orders
 				error_log("Invalid Order " . $order_id . " received.");
 			} else {
 				$payment_method_used = $order->get_meta('_payment_method', true);
-
+				
 				if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
 					$date_completed = $order->get_date_completed();
 					$datefrom = new DateTime($date_completed);
@@ -1304,7 +1307,7 @@ class Bulletproof_Shop_Orders
 					if ($days_diff < 30) {
 						$lite_gateway = new Bulletproof_Payment_Gateway_Lite();
 						$response_refund = $lite_gateway->process_refund($order_id, $order->get_total());
-
+						
 						if (is_wp_error($response_refund)) {
 
 							$the_msg = "Order " . $order_id . " was not refunded.";
@@ -1325,24 +1328,53 @@ class Bulletproof_Shop_Orders
 							return false;
 						} else {
 							$the_msg = "Order " . $order_id . " was refunded succesfully";
+							
 							error_log($the_msg);
+							//error_log($response_refund);
 							try {
 								$current_user = wp_get_current_user();
 							} catch (Exception $ex) {
 								$current_user = "";
 							}
-							$order->update_meta_data('_cancel_by',  $current_user);
-							$order->update_meta_data('_bulletproof_refunded',  true);
+							$the_username = "";
+							if (isset($current_user->user_login)) {
+								$the_username = $current_user->user_login;
+							} else {
+								if (isset($current_user)) {
+									$the_username = $current_user;
+								} else {
+									$the_username = "";
+								}
+							}
+							$order->update_meta_data('_cancel_by', $the_username);
+							$order->update_meta_data('_bulletproof_refunded', true);
+							// json array for register refund transactions 
+						//	if (is_string($response_refund)) {
+								$order->update_meta_data('_bulletproof_refund_response', $response_refund);
+								$order->update_meta_data('_bulletproof_refund_response_flag', "1");
+						//	}
+							// json array for register refund transactions 
+							$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
+							if ($transaction_id_refunds != "") {
+								$refund_ids_array = json_decode($transaction_id_refunds, true);
+							} else {
+								$refund_ids_array = array();
+							}
+							// TODO : adds the transaction ID of the received refund
+							$order->save();
+							return true;
 						}
 					} else {
 						error_log("Order " . $order_id . " is older than 30 days and can not be refunded in the Payment Gateway");
 						$order->add_order_note("This order is older than 30 days and can not be refunded from the BulletProof Checkout Plugin, but the status in WooCommerce was changed to Cancelled");
 						$order->save();
+						return false;
 					}
 				} else {
 					error_log("Order " . $order_id . " was not refunded by BulletProof because was originally paid with other payment gateway");
 					$order->add_order_note("This order can not be refunded by BulletProof because was paid on another payment gateway");
 					$order->save();
+					return false;
 				}
 			}
 		}
@@ -1380,7 +1412,7 @@ class Bulletproof_Shop_Orders
 			if ($socket_timeout < 60) {
 				ini_set('default_socket_timeout', 120);
 			}
-
+			//if ($this->settings)
 			$gateway_settings = get_option('woocommerce_bulletproof_bpcheckout_lite_settings');
 			if (isset($gateway_settings['username'])) {
 				$username = $gateway_settings['username'];
