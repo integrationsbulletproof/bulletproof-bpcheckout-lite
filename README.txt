@@ -16,7 +16,7 @@ BulletProof Checkout Gateway seamlessly integrates 3DS chargeback prevention tec
 "Say goodbye to fraudulent chargebacks and the headaches they cause!"
 
 
-#### BACKGROUND 
+#### BACKGROUND
 Years ago, credit card brands developed a technology called 3DS to prevent fraud chargebacks. When used correctly, Cardbrands will assume liability for fraud chargebacks, so you don't have to deal with them.
 
 BulletProof Checkout has leveraged 3DS technology to create a user-friendly platform that is easy to implement and customize according to your needs.
@@ -47,7 +47,7 @@ The plugin interacts with the following API endpoints:
 
 
 #### OFFERING
-The BulletProof Checkout gateway is compatible many top credit card processors.  If you currently have a merchant account with a compatible processor or are looking for an integrated processing solution, we can help. Contact us with any questions.  
+The BulletProof Checkout gateway is compatible many top credit card processors.  If you currently have a merchant account with a compatible processor or are looking for an integrated processing solution, we can help. Contact us with any questions.
 
 - Payment Agnostic - we integrate with many processors, allowing you to use your current merchant account and help you connect it into our BuletProof Gateway. 
 
@@ -73,13 +73,13 @@ If your experience using 3DS did not meet your expectations, it's time to try th
 - Synergistically works with RDR, Ethica, and Verifi alerts.
 
 
-#### PAYMENT ACCEPTANCE METHODS 
+#### PAYMENT ACCEPTANCE METHODS
 - Credit Card
 - Checks
 - Cash 
 - More to come
 
-#### PRO-ACTIVE PREVENTION BENEFITS 
+#### PRO-ACTIVE PREVENTION BENEFITS
 Preventing a chargeback avoids the following:
 -  Chargeback Fees
 - Additional Processing and Gateway Fees 
@@ -97,13 +97,13 @@ Preventing a chargeback avoids the following:
 - Amazing 3DS chargeback prevention, adjustable 3DS settings, and take control over the customer checkout experience.
 - Sale, authorization, subscription, and order processing.
 - Collect payments inside and outside of WooCommerce.
-- Refund via Dashboard: Process full or partial refunds, directly from your WordPress dashboard. 
+- Refund via Dashboard: Process full or partial refunds, directly from your WordPress dashboard.
 
 
 == Plus Version ==
 ### WooCommerce Plugin Plus Version. (Free for any already existing customer)
 - Integrated 3DS controls within your WooCommerce store.
-- Enhanced secure payment page that ensures all your transactions are safe, secure and encrypted with no programming required. 
+- Enhanced secure payment page that ensures all your transactions are safe, secure and encrypted with no programming required.
 - Adds an additional layer of security to SSL with point-to-point encryption for enhanced protection.
 - WooCommerce Order status updates received automatically from the gateway via webhooks.
 - Authorize can capture later direct from the WooCommerce order list
@@ -138,14 +138,14 @@ Preventing a chargeback avoids the following:
 
 == Frequently Asked Questions ==
 
-### What is the distinction between Chargeback Prevention and Chargeback Protection? 
+### What is the distinction between Chargeback Prevention and Chargeback Protection?
 - "Chargeback prevention" refers to a proactive strategy to avoid receiving a chargeback and the associated difficulties of disputing and winning it. The use of 3DS provides a proactive, preventative approach to avoid fraud-based chargebacks and prevent them from being reported to your merchant account.
 
 "Chargeback protection" includes a range of services and tools that help you deal with an actual chargeback reported to your merchant account and achieve the best possible outcome.
 
 
 ###What if we already have a company that is managing our chargebacks?
-- 3DS provides a proactive preventative approach so that you can avoid fraud-based chargebacks and save time and money by not receiving them. 
+- 3DS provides a proactive preventative approach so that you can avoid fraud-based chargebacks and save time and money by not receiving them.
 
 You can use our 3DS chargeback prevention solution synergistically alongside any other chargeback protection solution to address chargebacks outside the scope of 3DS
 
@@ -153,13 +153,13 @@ We also offer chargeback protection services that are integrated into our paymen
 
 
 ### Why is BulletProof Checkout the best option for 3DS?
-- We are the world’s first fully featured 3DS gateway. All of our payment methods boast easy-to-use 3DS technology without the need for any programming. 
+- We are the world’s first fully featured 3DS gateway. All of our payment methods boast easy-to-use 3DS technology without the need for any programming.
 
 We have addressed the most common reasons why merchants have yet to entirely embrace 3DS technology at the checkout and provided a means to control the 3DS checkout experience.
 
 
 ### Can I use BulletProof Checkout payment gateway alongside my current processor?
-- Yes, as long as we are compatible.  
+- Yes, as long as we are compatible.
 
 We can also provide a cost-effective merchant account and integrate it into BulletProof without any effort on your end.
 
@@ -190,10 +190,10 @@ For any technical support or integration questions contact support@bulletproof-c
 - There is no max transaction limit that can be 3DS protected.
 
 
-### Where can I get API credentials? 
-- You need to sign up for an account with BulletProof and obtain API credentials.  Contact docs@bulletproof-checkout.com 
+### Where can I get API credentials?
+- You need to sign up for an account with BulletProof and obtain API credentials.  Contact docs@bulletproof-checkout.com
 
-### Compatibility issues 
+### Compatibility issues
 - If you have enabled JetPack and will use the WooCommerce Mobile App you will need to disable the JetPack notifications in the page wp-admin/admin.php?page=jetpack_modules
 
 == Changelog ==
@@ -205,3 +205,5 @@ Initial release
 
 = 1.0.9 =
 Added support for merchants with and without 3DS
+= 1.0.10 =
+Added a Patch for failed transactions not reported

@@ -317,7 +317,6 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		}
 	}
 
-
 	/**
 	 * Handler for processing payment responses.
 	 */
@@ -328,15 +327,21 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$status_updated = false;
 		// Nonce verification is not applicable for this payment response, as it is coming from payment processor.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$order_id = isset($_GET['orderid']) ? intval($_GET['orderid']) : 0;
+		$order_id = 0;
+		if (isset($_GET['orderid'])) {
+			$order_id = $_GET['orderid'];
+			if ($order_id=="") $order_id=0;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$transaction_id = isset($_GET['transactionid']) ? intval($_GET['transactionid']) : 0;
+		$denial_response = isset($_GET['denial']) ? intval($_GET['denial']) : 0;
 		// Code for processing payment responses based on query parameters.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		// Non-3DS customers also will be able to update their postmeta information
 		//if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
-		if (!empty($order_id) && !empty($transaction_id) && ($transaction_id != "0")) {
+		if (!empty($order_id) && !empty($transaction_id) && ($transaction_id != "0") && ($denial_response == "0")) {
 			$sale_method_found = $this->get_option('salemethod');
 			$order = new WC_Order($order_id);
 
@@ -365,10 +370,19 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			WC()->cart->empty_cart();
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		} elseif (!empty($_GET['denial']) || !empty($_GET['token'])) {
-			self::bulletproof_display_notice('Transaction Failed', 'error');
+			$failed_msg = 'Transaction Failed';
+			if ((isset($_GET['denial_reason'])) && ($_GET['denial_reason'] != "")) {
+				$failed_msg .= " Reason: " . $_GET['denial_reason'];
+			}
+			self::bulletproof_display_notice($failed_msg, 'error');
 			if ($order_id != "") {
+				// Check if got a transaction id
+				if ((isset($_GET['transactionid'])) && ($_GET['transactionid'] != "")) {
+					$failed_msg .= " Gateway Failed Transaction ID#" . $_GET['transactionid'];
+				}
 				$order = new WC_Order($order_id);
 				$order->update_status('wc-failed');
+				$order->add_order_note($failed_msg);
 			}
 		}
 	}
@@ -650,7 +664,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					}
 					$order->update_meta_data('_cancel_by', $the_username);
 					$order->update_meta_data('_bulletproof_refunded', true);
-					// json array for register refund transactions 
+					// json array for register refund transactions
 					//	if (is_string($response)) {
 					$refund_transactionid = "";
 					if ((isset($response->action)) && ($response->action == "refund")) {
@@ -684,19 +698,19 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					$order->update_meta_data('_bulletproof_refund_response', $data_to_store);
 					$order->update_meta_data('_bulletproof_refund_response_flag', "2");
 					//	}
-					// json array for register refund transactions 
-					if (($refund_transactionid != $transaction_id) &&($refund_transactionid!="")){
+					// json array for register refund transactions
+					if (($refund_transactionid != $transaction_id) && ($refund_transactionid != "")) {
 						$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
 						if ($transaction_id_refunds != "") {
 							$refund_ids_array = json_decode($transaction_id_refunds, true);
 						} else {
 							$refund_ids_array = array();
 						}
-						array_push($refund_ids_array,$refund_transactionid);
+						array_push($refund_ids_array, $refund_transactionid);
 						$order->update_meta_data('_payment_gateway_tx_refunds', json_encode($refund_ids_array));
 					}
 					$order->save();
-					
+
 					return true;
 				}
 			} else {

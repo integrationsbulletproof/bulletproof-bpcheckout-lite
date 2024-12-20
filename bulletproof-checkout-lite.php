@@ -4,7 +4,7 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Receive Credit Card payments using the Lite version of the BulletProof Gateway.
- * Version: 1.0.9
+ * Version: 1.0.10
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
@@ -137,5 +137,5 @@ if (!function_exists('bulletproof_gateway_lite_2024_visitweb')) {
 	}
 }
 
-		
+
 
