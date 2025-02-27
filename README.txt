@@ -1,13 +1,13 @@
 === BulletProof Payment Gateway ===
 Contributors: bulletproofcheckout
-Tags: woocommerce, 3DS, payment gateway, bulletproof, NMI
+Tags: woocommerce, 3DS, payment gateway, bulletproof, NMI, chargeback
 Requires at least: 4.0
-Tested up to: 6.5.4
+Tested up to: 6.7.1
 Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Receive Credit Card payments using the BulletProof Gateway
+Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
 
 == Description ==
 
@@ -117,15 +117,23 @@ Preventing a chargeback avoids the following:
 1. Upload the `bulletproof-payment-gateway` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
 3. Navigate to WooCommerce > Settings > Payments and configure your BulletProof Payment Gateway settings.
+4. Use the credentials provided by the Gateway Support Team
+5. Enter into your BulletProof portal ->Other Services ->Webhooks and create one of these webhooks:
+  If you have a Sucuri Firewall or your site is hosted at Godaddy (or if your firewall blocks the access to the Wordpress plugin directory):
+  https://yoursitename.com/?rest_route=/bpcheckout/webhooks
+  Everyother site can use:
+  https://yoursitename.com/wp-content/plugins/bulletproof-checkout-lite/webhook.php
+
 
 == Configuration ==
 
 1. Visit the WooCommerce settings page and click on the "Payments" tab.
 2. Find "BulletProof Payment Gateway" in the list of available payment methods and click "Manage."
 3. Configure the necessary settings, such as API key, user name and password .
-4. The Customer Vault feature is only available if you have enabled the Customer Vault feature in your BulletProof Account, otherwise will trigger an error in the checkout. During the initial tests set to "No"
-5. Select your processor, if you leave the processor dropdon unselected then will trigger an error in the checkout page.
-6. Save changes.
+4. The Webhook API key is located into your BulletProof portal account->Other services->webhooks (follow the instruction provided at the installation section of this readme file)
+5. The Customer Vault feature is only available if you have enabled the Customer Vault feature in your BulletProof Account, otherwise will trigger an error in the checkout. During the initial tests set to "No"
+6. Select your processor, if you leave the processor dropdon unselected then will trigger an error in the checkout page.
+7. Save changes.
 
 == Usage ==
 
@@ -133,8 +141,8 @@ Preventing a chargeback avoids the following:
 2. Customers provide necessary payment details and complete the order.
 3. The plugin processes the payment through the BulletProof API.
 4. Order status is updated based on the BulletProof API response.
-5. Voids are only available in the BulletProof portal, any refund or void manually at the BulletProof portal will not be reflected on WooCommerce (this is available automated in the plugin PLUS version)
-6. Any change in the payment at the BulletProof portal (ex. a refund) will not be reflected in the order status on WooCommerce (this is available automated in the plugin PLUS version)
+5. Voids are only available in the BulletProof portal, if you void a order at the BulletProof portal then the related WooCommerce order will be changed to status "Cancelled" (only if the order was on status pending or completed)
+6. Refunds made at the BulletProof portal will be reflected on the related WooCommerce order, no partial refunds supported at the BulletProof portal. Status at the WooCommerce will be changed only if the order status was pending or completed
 
 == Frequently Asked Questions ==
 
@@ -163,13 +171,16 @@ We have addressed the most common reasons why merchants have yet to entirely emb
 
 We can also provide a cost-effective merchant account and integrate it into BulletProof without any effort on your end.
 
+### Can I integrate BulletProof Checkout Lite with the CRM Sticky.IO
+- We support Sticky.IO integration into the plus version only, contact the support team and we will help you.
+
 Contact info@bulletproof-checkout.com
 
 ### The plugin supports the Official WooCommerce Mobile App?
 - Yes
 
 ### Countries Served
-- Currently we support US, CA, and UK. We receive Credit Cards Worlwide.
+- Currently we support US, CA, and UK. We receive Credit Cards Worldwide.
 
 
 ### What are the requirements or paperwork needed?
@@ -207,3 +218,5 @@ Initial release
 Added support for merchants with and without 3DS
 = 1.0.10 =
 Added a Patch for failed transactions not reported
+= 1.0.11 =
+Added support for Webhooks

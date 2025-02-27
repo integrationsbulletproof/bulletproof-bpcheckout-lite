@@ -64,6 +64,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 		// Handle BulletProof payment endpoint
 		add_action('init', array($this, 'bulletproof_payment_endpoint'));
+		// Handle BulletProof portal webhook reception
+		// Experimental: add a endpoint for receive data instead of /webhook.php (useful for Wordpress firewalled sites like Sucuri)
+		add_action('rest_api_init', array($this, 'custom_endpoint_for_bp_lite2025'));
 
 		// Handle BulletProof payment response
 		add_action('wp', array($this, 'bulletproof_payment_response_handler'));
@@ -72,7 +75,22 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'bulletproof_validate_payment_gateway_credentials'));
 	}
 
+	public function custom_endpoint_for_bp_lite2025()
+	{
+		register_rest_route('bpcheckout', '/webhooks', array(
+			'methods' => 'GET,POST',
+			'callback' =>  array($this, 'custom_callback_for_bplite2025'),
+		));
+	}
 
+	/**
+	 * Reception of data coming from the BulletProof portal
+	 */
+	public function custom_callback_for_bplite2025($request_data)
+	{
+		$exec_webhook = new Bulletproof_webhook_class();
+		$exec_webhook->start_webhook_reception();
+	}
 
 	/**
 	 * Define form fields for WooCommerce settings.
@@ -141,6 +159,11 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				'title'       => __('App Secret', 'bulletproof-checkout-lite'),
 				'type'        => 'password',
 				'description' => __('This is the App Secret generated within the BulletProof Checkout.', 'bulletproof-checkout-lite'),
+			),
+			'webhook_api_key' => array(
+				'title'       => __('Webhook API key', 'bulletproof-checkout-lite'),
+				'type'        => 'password',
+				'description' => __('This is available at the BulletProof portal at the section Other Services->webhooks.', 'bulletproof-checkout-lite'),
 			),
 			'salemethod'  => array(
 				'title'       => __('Sale Method', 'bulletproof-checkout-lite'),
@@ -330,7 +353,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$order_id = 0;
 		if (isset($_GET['orderid'])) {
 			$order_id = $_GET['orderid'];
-			if ($order_id=="") $order_id=0;
+			if ($order_id == "") $order_id = 0;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -343,30 +366,37 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		//if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
 		if (!empty($order_id) && !empty($transaction_id) && ($transaction_id != "0") && ($denial_response == "0")) {
 			$sale_method_found = $this->get_option('salemethod');
-			$order = new WC_Order($order_id);
 
-			$this->bulletproof_update_order_meta($order_id, $transaction_id, $order);
+			// Patch to avoid the Invalid Order error if order_id is invalid
+			//$order = new WC_Order($order_id);
+			$order = wc_get_order($order_id);
+			$this->bulletproof_lite_update_order_meta($order_id, $transaction_id, $order);
 			if ($sale_method_found == 'sale') {
-				$order->payment_complete();
-				$status_after_payment_completed = $this->get_option('status_after_order_completed');
-				if ($status_after_payment_completed == "") $status_after_payment_completed = "completed";
-				if ($status_after_payment_completed != "bp_donotchange") {
-					$order->update_status($status_after_payment_completed, __('Status after payment received updated by the BulletProof Plugin. ', 'bulletproof-checkout-lite'));
+				if ($order) {
+					$order->payment_complete();
+					$status_after_payment_completed = $this->get_option('status_after_order_completed');
+					if ($status_after_payment_completed == "") $status_after_payment_completed = "completed";
+					if ($status_after_payment_completed != "bp_donotchange") {
+						$order->update_status($status_after_payment_completed, __('Status after payment received updated by the BulletProof Plugin. ', 'bulletproof-checkout-lite'));
+						$the_msg = 'Status updated by the BulletProof Plugin due to sale method found is:' . $sale_method_found . '. ';
+					}
 				}
 				wc_maybe_reduce_stock_levels($order_id);
 			} else {
 				if ($sale_method_found == "") {
 					$the_msg = "No sale was found, please contact the Gateway Support Team";
 				} else {
-					$the_msg = 'Status updated by the BulletProof Plugin due to sale method found is:' . $sale_method_found . '. ';
+					$the_msg = 'Status updated by the BulletProof Plugin due to sale method found is :' . $sale_method_found . '. ';
 				}
-				$order->update_status('wc-on-hold', __($the_msg, 'bulletproof-checkout-lite'));
+				if ($order) {
+					$order->update_status('wc-on-hold', __($the_msg, 'bulletproof-checkout-lite'));
+				}
 			}
-
-			$order->set_transaction_id($transaction_id);
-			$order->update_meta_data('_bulletproof_gateway_action_type', $sale_method_found);
-			$order->save();
-
+			if ($order) {
+				$order->set_transaction_id($transaction_id);
+				$order->update_meta_data('_bulletproof_gateway_action_type', $sale_method_found);
+				$order->save();
+			}
 			WC()->cart->empty_cart();
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		} elseif (!empty($_GET['denial']) || !empty($_GET['token'])) {
@@ -375,14 +405,18 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				$failed_msg .= " Reason: " . $_GET['denial_reason'];
 			}
 			self::bulletproof_display_notice($failed_msg, 'error');
-			if ($order_id != "") {
+			if (($order_id != "") && ($order_id != "0")) {
 				// Check if got a transaction id
 				if ((isset($_GET['transactionid'])) && ($_GET['transactionid'] != "")) {
 					$failed_msg .= " Gateway Failed Transaction ID#" . $_GET['transactionid'];
 				}
-				$order = new WC_Order($order_id);
-				$order->update_status('wc-failed');
-				$order->add_order_note($failed_msg);
+				// Patch to solve Invalid Order triggered when a wrong order id was received
+				//$order = new WC_Order($order_id);
+				$order = wc_get_order($order_id);
+				if ($order) {
+					$order->update_status('wc-failed');
+					$order->add_order_note($failed_msg);
+				}
 			}
 		}
 	}
@@ -396,6 +430,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	{
 		add_rewrite_endpoint('bulletproof-payment-processing', EP_ROOT | EP_PAGES);
 	}
+
 
 	/**
 	 * Function to make API requests for refund payment.
@@ -714,7 +749,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					return true;
 				}
 			} else {
-				$the_msg = "Refund was not made due to missed transaction id";
+				$the_msg = "The refund was not processed due to a missing transaction ID. The WooCommerce order lacks an attached gateway transaction. Please reach out to the gateway support team.";
 				error_log(print_r($the_msg, true));
 				return new WP_Error('bulletproof_no_transaction_id', $the_msg);
 			}
@@ -982,7 +1017,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	 * @param string $transaction_id The transaction ID.
 	 */
 
-	public function bulletproof_update_order_meta($order_id, $transaction_id, $order = "")
+	public function bulletproof_lite_update_order_meta($order_id, $transaction_id, $order = "", $subscriptionid = "", $first_name = "", $last_name = "", $payment_type = "", $cctype = "", $first6 = "", $last4 = "", $processor = "", $cardholder_auth = "", $cavv = "", $eci = "")
 	{
 		// Get the current date and time.
 		$order_date = gmdate('Y-m-d H:i:s');
@@ -999,7 +1034,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 		$order->update_meta_data('_bulletproof_gateway_action_type_sale', $order_date);
 		$order->update_meta_data('_payment_gateway_tx_received_prewebhook', $transaction_id);
-		$order->update_meta_data('_subscriptionId_prewebhook', "");
+		$order->update_meta_data('_subscriptionId_prewebhook', $subscriptionid);
 		$order->update_meta_data('_payment_gateway_tx_received', $transaction_id);
 		$order->update_meta_data('_payment_gateway_subscriptionId_received', "");
 		$order->update_meta_data('bulletproof_bpcheckout_gateway', BULLETPROOF_BPCHECKOUT_GATEWAY);
@@ -1011,6 +1046,43 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$order->update_meta_data('_paid_date', gmdate('Y-m-d H:i:s'));
 		$order->update_meta_data('_completed_date', gmdate('Y-m-d H:i:s'));
 		$order->update_meta_data('_random_naunce_key', $random_naunce_key);
+
+		// Billing data
+		if ($first_name != "") {
+			$order->update_meta_data('_gateway_first_name', $first_name);
+		}
+		if ($last_name != "") {
+			$order->update_meta_data('_gateway_last_name', $last_name);
+		}
+		// CardHolder Authentication
+		if ($eci != "") {
+			$order->update_meta_data('_gateway_eci', $eci);
+		}
+		if ($cavv != "") {
+			$order->update_meta_data('_gateway_cavv', $cavv);
+		}
+		if ($cardholder_auth != "") {
+			$order->update_meta_data('_gateway_cardholder_auth', $cardholder_auth);
+		}
+		// Payment type
+		if ($payment_type != "") {
+			$order->update_meta_data('_gateway_payment_type', $payment_type);
+		}
+		// CC Brand
+		if ($cctype != "") {
+			$order->update_meta_data('_gateway_cctype', $cctype);
+		}
+		if ($first6 != "") {
+			$order->update_meta_data('_gateway_first6', $first6);
+		}
+		if ($last4 != "") {
+			$order->update_meta_data('_gateway_last4', $last4);
+		}
+		if ($processor != "") {
+			$order->update_meta_data('_gateway_processor', $processor);
+		}
+
+		// update the billing first name, last name, last4, cctype
 		$order->save();
 	}
 

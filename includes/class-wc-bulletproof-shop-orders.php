@@ -32,6 +32,264 @@ class Bulletproof_Shop_Orders
 		add_action('woocommerce_order_status_changed', array($this, 'woo_order_status_change_bpcheckout_lite'), 10, 3);
 
 
+		// Add a meta box inside the Order detail
+		add_action('add_meta_boxes', 'add_shop_order_meta_box_bulletproof_lite_2223738', 10, 2);
+		function add_shop_order_meta_box_bulletproof_lite_2223738($post_type, $post)
+		{
+			if (is_admin()) {
+				add_meta_box(
+					'custom_meta_box_lite',
+					__('Payment information', 'woocommerce'),
+					'shop_order_content_callback_bulletproof_lite_2223738',
+					'shop_order'
+				);
+			}
+		}
+
+		// returns a single value from the postmeta array received
+		function return_meta_data_lite($meta_data, $value)
+		{
+			if (isset($meta_data[$value][0])) {
+				return $meta_data[$value][0];
+			} else {
+				return "";
+			}
+		}
+
+
+		// check if a profile (based on Wordpress roles) had access to specific resource (invoices,subscriptions,refunds)
+		function bulletproof_lite_profile_has_access($profile, $resource)
+		{
+			$profile = preg_replace("/[^a-zA-Z0-9]+/", "", $profile);
+			$setting_data = \get_option('woocommerce_bulletproof_bpcheckout_roles');
+			if ($setting_data != '') {
+				$bp_roles = json_decode($setting_data, true);
+
+				if (isset($bp_roles[$profile][$resource])) {
+
+					if ($bp_roles[$profile][$resource] == '1') {
+
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		// displaying metabox Order content
+		function shop_order_content_callback_bulletproof_lite_2223738($post)
+		{
+
+			// get the billing data received
+
+			$result_found = \get_metadata("post", $post->ID);
+			$payment_method = return_meta_data_lite($result_found, '_payment_method');
+			if ($payment_method == "bulletproof_bpcheckout_lite") {
+				$current_post_status = \get_post_status($post->ID);
+
+				$current_3ds = return_meta_data_lite($result_found, '_bpcheckout_3DS');
+				$current_3ds_eci = return_meta_data_lite($result_found, '_3DS_eci');
+				$active_payment_gateway = return_meta_data_lite($result_found, 'bulletproof_bpcheckout_gateway');
+				$environment = strtolower(return_meta_data_lite($result_found, 'bulletproof_bpcheckout_gateway_environment'));
+				$received_status = return_meta_data_lite($result_found, '_3DS_external_status');
+				$paid_date = return_meta_data_lite($result_found, '_paid_date');
+				$refund_date = return_meta_data_lite($result_found, '_bulletproof_gateway_void_or_refund_date');
+				$action_type = return_meta_data_lite($result_found, '_bulletproof_gateway_action_type');
+				$transaction_id = return_meta_data_lite($result_found, '_transaction_id');
+				$any_cancel_reason = return_meta_data_lite($result_found, "_order_cancelled_reason", true);
+				$transaction_type = strtoupper(return_meta_data_lite($result_found, '_bulletproof_gateway_action_type', true));
+				$billing_first_name = return_meta_data_lite($result_found, "_gateway_first_name", true);
+				$billing_last_name = return_meta_data_lite($result_found, "_gateway_last_name", true);
+				$card_type = return_meta_data_lite($result_found, "_gateway_cctype", true);
+				$card_last4 = return_meta_data_lite($result_found, "_gateway_last4", true);
+				$card_first6 = return_meta_data_lite($result_found, "_gateway_first6", true);
+				// Cardholder Authentication
+				$cavv = return_meta_data_lite($result_found, "_gateway_cavv", true);
+				$eci = return_meta_data_lite($result_found, "_gateway_eci", true);
+				$cardholder_auth = return_meta_data_lite($result_found, "_gateway_cardholder_auth", true);
+				$display_transaction_id = return_meta_data_lite($result_found, '_payment_gateway_tx_received_prewebhook', true);
+				if ($display_transaction_id == "") $display_transaction_id = $transaction_id;
+				// Check the transaction information
+
+
+				echo "<div style='display:inline-block;' >";
+				if ($current_3ds != "") {
+					echo "<div style='font-weight:bolder;float: left;'>Payment 3DS status: " . $current_3ds . "<br><br></div>";
+					if (defined('WP_DEBUG') && true === WP_DEBUG) {
+						if ($current_3ds_eci != "") {
+							echo "<br><div style='font-weight:bolder;float: left;'>ECI received: " . $current_3ds_eci . "<br><br></div>";
+						}
+					}
+				} else {
+					if ($received_status == "y") {
+						echo "<div style='font-weight:bolder;float: left;'>Payment 3DS status: <br>";
+						echo "<img src='" . get_site_url() . "/wp-content/plugins/bulletproof-checkout-lite/assets/images/vest_mini.gif' height='20px' width='auto' alt='Authenticated' />";
+						echo "<br><br></div>";
+						if (defined('WP_DEBUG') && true === WP_DEBUG) {
+							if ($current_3ds_eci != "") {
+								echo "<br><div style='font-weight:bolder;float: left;'>ECI received: " . $current_3ds_eci . "<br><br></div>";
+							}
+						}
+					}
+				}
+				echo "<div style='float: right;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>";
+
+				echo "</div>";
+
+				$order = wc_get_order($post->ID);
+				$date_completed = $order->get_date_completed();
+				$datefrom = new DateTime($date_completed);
+				$dateto = new DateTime();
+				$days_diff = $datefrom->diff($dateto)->days;  // days since order was completed
+
+
+
+				$cur_status = get_post_status($post->ID);
+				if ($cur_status == "wc-completed") {
+
+					// button will be displayed only for admins or ifuser profile had permissiones
+					$display_refund_button = false;
+					if (is_user_logged_in()) {
+						$current_user = wp_get_current_user();
+						$roles = (array) $current_user->roles;
+
+						if (strtolower($roles[0]) == 'administrator') {
+							if (($cur_status != "wc-refunded") && ($cur_status != "wc-failed") && ($cur_status != "wc-canceled") && ($cur_status != "wc-cancelled")  && ($cur_status != "wc-spanorder") && ($cur_status != "wc-spamorder")) {
+								$display_refund_button = true;
+							}
+						} else {
+							// search if profile had permissions to Refund resource
+							if (bulletproof_lite_profile_has_access(strtolower($roles[0]), "refunds")) {
+								$display_refund_button = true;
+							}
+						}
+					}
+
+
+
+					if ($display_refund_button) {
+
+						// TODO: shows a refund button inside the Order detail
+					}
+				} else {
+					if ((strtolower(get_post_status($post->ID)) == "wc-processing") && ($display_transaction_id != "")) {
+
+						$display_refund_button = false;
+						if (is_user_logged_in()) {
+							$current_user = wp_get_current_user();
+							$roles = (array) $current_user->roles;
+
+							if (strtolower($roles[0]) == 'administrator') {
+								$display_refund_button = true;
+							} else {
+								// search if profile had permissions to Refund resource
+								if (bulletproof_lite_profile_has_access(strtolower($roles[0]), "refunds")) {
+									$display_refund_button = true;
+								}
+							}
+						}
+
+						if ($display_refund_button) {
+
+							// TODO: show a refund button
+						}
+					}
+				}
+
+				// check if a error_msg is returned
+				if (isset($_GET['error_msg'])) {
+					echo "<p style='color:red;font-weight:bolder;'>" . urldecode($_GET['error_msg']) . "</p>";
+				}
+
+				// Shows a table with the transaction information
+
+				echo "<table style='width:100%;'>";
+				echo "<tr style='font-weight:bolder;background-color:lightgray;'>";
+				echo "<td>Type</td>";
+
+				echo "<td>Payment Gateway</td>";
+				echo "<td>Billing Info</td>";
+
+				echo "<td>Transaction Type</td>";
+				echo "<td>Transaction ID</td>";
+
+				echo "<td>Amount</td>";
+
+				if ($paid_date != "") {
+					echo "<td>Transaction Date</td>";
+				}
+				echo "<td>Action</td>";
+				echo "</tr>";
+				// for main order
+				echo "<tr>";
+				echo "<td>Order</td>";
+
+				echo "<td>" . $active_payment_gateway . "</td>";
+
+
+				// Billing info line
+				if ($card_type != '') {
+					$billing_line = "Billing Name: " . $billing_first_name . " " . $billing_last_name . "<br>Credit Card Type: " . $card_type . "<br>Credit Card Number:" . $card_first6 . "******" . $card_last4 . "<br>";
+				} else {
+					$billing_line = "";
+				}
+				echo "<td>" . $billing_line . "</td>";
+
+
+				echo "<td>" . $transaction_type . "</td>";
+				echo "<td>";
+
+				// Link to the transaction detail in the BulletProof portal
+				if ($display_transaction_id != "") {
+					if ($_SERVER['HTTP_HOST'] == "localhost") { // Used for development environments
+						$url = "https://localhost/portal/index.php?tx=" . $display_transaction_id;
+					} else {
+						$url = "https://live.bpcheckout.com/portal/index.php?tx=" . $display_transaction_id;
+					}
+					echo "<a onclick=\"window.open('" . $url . "', '_blank', 'location=no,height=800,width=1024,scrollbars=yes,status=yes');\" style='cursor:pointer;'>";
+					echo $display_transaction_id;
+					echo "</a>";
+				}
+				echo "</td>";
+
+				echo "<td>" .  get_woocommerce_currency_symbol() . get_post_meta($post->ID, '_order_total', true) . "</td>";
+				if ($paid_date != "") {
+					echo "<td>" . $paid_date . "</td>";
+				}
+				// Add any potential action action
+				echo "<td>";
+				// Add any cardholder authentication info
+				if ($cavv != "" && $cardholder_auth == "verified" && $eci!="") {
+					echo "<label style='color:green;'>This transaction has received 3DS authentication</label>";
+				}
+				echo "</td>";
+				echo "</tr>";
+
+				// check if the order timed out on the payment screen
+				if (($current_post_status != "wc-complete") && ($current_post_status != "wc-approve")) {
+
+					if ($any_cancel_reason == "") {
+						if ($display_transaction_id == "") {
+							echo "No payment information received.";
+						}
+					} else {
+						echo "<div style='color:red;'><strong>";
+						if ($any_cancel_reason == "TIMEOUT") {
+							echo "Payment Form Timed Out";
+						} else {
+							if ($any_cancel_reason == "AUTOCANCEL") {
+								echo "Cart Abandonment occurred for any of the following reasons:<br>* Customer  closed the browser<br>* Customer clicked the back button on the order form<br>* Customer clicked the browser back button ";
+							} else {
+								echo "Payment cancel reason:" . $any_cancel_reason;
+							}
+						}
+						echo "</strong></div>";
+					}
+				}
+			}
+		}
+
 		// State is not a required field
 		add_filter('woocommerce_shipping_fields', array($this, 'bp_unrequire_wc_shipping_state_field'));
 		add_filter('woocommerce_billing_fields', array($this, 'bp_unrequire_wc_billing_state_field'));
@@ -39,7 +297,7 @@ class Bulletproof_Shop_Orders
 		add_filter('woocommerce_default_address_fields', array($this, 'bp_remove_state_validation'));
 
 		if (BULLETPROOF_CHECKOUT_DISABLEJETPACKSSO) {
-			// JetPack SSO is a module auto-enabled in some hosting providers like Bluehost which 
+			// JetPack SSO is a module auto-enabled in some hosting providers like Bluehost which
 			// is in conflict with the Official Woo Mobile App (Mobile App requires JetPack enabled)
 			// more info here: https://jetpack.com/support/getting-started-with-jetpack/known-issues/
 			function jetpackcom_support_disable_jetpack_sso($modules)
@@ -68,7 +326,7 @@ class Bulletproof_Shop_Orders
 	{
 
 
-		// Add all the states missed by Woo 
+		// Add all the states missed by Woo
 
 		$states['AF'] = array(
 			'BDS' => __('Badakhshan', 'woocommerce'),
@@ -1187,23 +1445,6 @@ class Bulletproof_Shop_Orders
 		}
 	}
 
-	public function bulletproof_checkout_capture_column_content_old($column, $order_id)
-	{
-
-		if ('payment_capture_column' === $column) {
-			$order = wc_get_order($order_id);
-			if ($order && $order->get_status() === 'on-hold') {
-				$transaction_id = $order->get_meta('_payment_gateway_tx_received', true);
-				if ($transaction_id != "") {
-					$sale_method_received = $order->get_meta('_bulletproof_gateway_action_type', true);
-					if ($sale_method_received == "auth") {
-						echo '<button class="button payment_capture_btn" data-order-id="' . esc_attr($order_id) . '">Capture</button>';
-					}
-				}
-			}
-		}
-	}
-
 	public function bulletproof_capture_order_payment_callback()
 	{
 		// Verify the nonce
@@ -1298,7 +1539,7 @@ class Bulletproof_Shop_Orders
 				error_log("Invalid Order " . $order_id . " received.");
 			} else {
 				$payment_method_used = $order->get_meta('_payment_method', true);
-				
+
 				if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
 					$date_completed = $order->get_date_completed();
 					$datefrom = new DateTime($date_completed);
@@ -1307,7 +1548,7 @@ class Bulletproof_Shop_Orders
 					if ($days_diff < 30) {
 						$lite_gateway = new Bulletproof_Payment_Gateway_Lite();
 						$response_refund = $lite_gateway->process_refund($order_id, $order->get_total());
-						
+
 						if (is_wp_error($response_refund)) {
 
 							$the_msg = "Order " . $order_id . " was not refunded.";
@@ -1328,7 +1569,7 @@ class Bulletproof_Shop_Orders
 							return false;
 						} else {
 							$the_msg = "Order " . $order_id . " was refunded succesfully";
-							
+
 							error_log($the_msg);
 							//error_log($response_refund);
 							try {
@@ -1348,12 +1589,12 @@ class Bulletproof_Shop_Orders
 							}
 							$order->update_meta_data('_cancel_by', $the_username);
 							$order->update_meta_data('_bulletproof_refunded', true);
-							// json array for register refund transactions 
-						//	if (is_string($response_refund)) {
-								$order->update_meta_data('_bulletproof_refund_response', $response_refund);
-								$order->update_meta_data('_bulletproof_refund_response_flag', "1");
-						//	}
-							// json array for register refund transactions 
+							// json array for register refund transactions
+							//	if (is_string($response_refund)) {
+							$order->update_meta_data('_bulletproof_refund_response', $response_refund);
+							$order->update_meta_data('_bulletproof_refund_response_flag', "1");
+							//	}
+							// json array for register refund transactions
 							$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
 							if ($transaction_id_refunds != "") {
 								$refund_ids_array = json_decode($transaction_id_refunds, true);

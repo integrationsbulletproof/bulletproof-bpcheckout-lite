@@ -3,16 +3,16 @@
 /**
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
- * Description: Receive Credit Card payments using the Lite version of the BulletProof Gateway.
- * Version: 1.0.10
+ * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
+ * Version: 1.0.11
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
- * WC tested up to: 9.3.2
- * Tested up to: 6.6.2
+ * WC tested up to: 9.6.2
+ * Tested up to: 6.7.2
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  */
@@ -60,6 +60,7 @@ if (!function_exists('bulletproof_payment_integration')) {
 
 			include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-payment-gateway-lite.php';
 			include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-shop-orders.php';
+			include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-webhook.php';
 			include_once plugin_dir_path(__FILE__) . 'includes/common.php';
 
 		} else {
