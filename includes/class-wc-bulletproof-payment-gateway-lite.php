@@ -80,6 +80,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		register_rest_route('bpcheckout', '/webhooks', array(
 			'methods' => 'GET,POST',
 			'callback' =>  array($this, 'custom_callback_for_bplite2025'),
+			'permission_callback' => '__return_true',
 		));
 	}
 
@@ -636,6 +637,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'headers' => array(
 				'accept' => 'application/json',
 			),
+			'user-agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0',
 			'body' => '',
 		);
 
@@ -793,6 +795,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'headers' => array(
 				'Accept' => 'application/json',
 			),
+			'user-agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0',
 			'body' => array(
 				'user' => $username,
 				'pass' => $password,

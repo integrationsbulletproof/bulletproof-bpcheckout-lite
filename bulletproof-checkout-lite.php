@@ -4,7 +4,7 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
- * Version: 1.0.11
+ * Version: 1.0.14
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
@@ -22,10 +22,12 @@ if (!defined('ABSPATH')) {
 }
 // Define constants for API base URL, gateway identifiers, and response format.
 // Please, do not change the constants
-// Live Endpoint
+// Live Endpoints
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL')) define('BULLETPROOF_CHECKOUT_API_BASE_URL', 'https://bulletproofcheckout.net/API/endpoints/directpost/');
-// Sandbox Endpoint - Transactions on sandbox are not registered in the portal
+if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS', 'https://bulletproofcheckout.net/API/endpoints/payment/view/');
+// Sandbox Endpoints
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX', 'https://bulletproofcheckout.net/APIsandbox/endpoints/directpost/');
+if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS', 'https://bulletproofcheckout.net/APIsandbox/endpoints/payment/view/');
 
 if (!defined('BULLETPROOF_CHECKOUT_GATEWAY')) define('BULLETPROOF_CHECKOUT_GATEWAY', 'BP');
 if (!defined('BULLETPROOF_CHECKOUT_FORMAT')) define('BULLETPROOF_CHECKOUT_FORMAT', 'raw');
@@ -62,7 +64,6 @@ if (!function_exists('bulletproof_payment_integration')) {
 			include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-shop-orders.php';
 			include_once plugin_dir_path(__FILE__) . 'includes/class-wc-bulletproof-webhook.php';
 			include_once plugin_dir_path(__FILE__) . 'includes/common.php';
-
 		} else {
 			// Display an admin notice if WooCommerce is not active.
 			add_action('admin_notices', 'bulletproof_payment_gateway_plugin_notice_not_activated');
@@ -72,10 +73,10 @@ if (!function_exists('bulletproof_payment_integration')) {
 
 // declares compatibility with HPOS (High Performance Orders)
 
-add_action('before_woocommerce_init', function(){
-    if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
-        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
-    }
+add_action('before_woocommerce_init', function () {
+	if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
+	}
 });
 
 
@@ -137,6 +138,3 @@ if (!function_exists('bulletproof_gateway_lite_2024_visitweb')) {
 		return $settings;
 	}
 }
-
-
-

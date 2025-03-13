@@ -80,13 +80,77 @@ class Bulletproof_Shop_Orders
 		// displaying metabox Order content
 		function shop_order_content_callback_bulletproof_lite_2223738($post)
 		{
-
+$card_first6="";
+$card_last4="";
 			// get the billing data received
 
 			$result_found = \get_metadata("post", $post->ID);
 			$payment_method = return_meta_data_lite($result_found, '_payment_method');
 			if ($payment_method == "bulletproof_bpcheckout_lite") {
 				$current_post_status = \get_post_status($post->ID);
+
+				$transaction_id = return_meta_data_lite($result_found, '_transaction_id');
+				$card_type = return_meta_data_lite($result_found, "_gateway_cctype", true);
+				// Check the transaction information
+				if (($card_type == "") && ($transaction_id != "")) {
+					// Search the transaction at the gateway
+					$request_args = array(
+						'headers' => array(
+							'accept' => 'application/json',
+						),
+						'user-agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0',
+						'body' => '',
+					);
+					$gateway_settings = get_option('woocommerce_bulletproof_bpcheckout_lite_settings');
+					$username = $gateway_settings['username'];
+					$password = $gateway_settings['password'];
+					$test_mode = $gateway_settings['testmode'];
+					$security_key = $gateway_settings['api_key'];
+
+					// Locate the API endpoint to be used
+					$base_api_url = "";
+					try {
+						if (($test_mode == "no") || ($test_mode == "")) {
+							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS;
+						} else {
+							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS;
+						}
+					} catch (Exception $e) {
+						$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS;
+					}
+
+
+					$api_url = $base_api_url . '?user=' . urlencode($username) .
+						'&pass=' . urlencode($password) .
+						'&security_key=' . urlencode($security_key) .
+						'&transactionid=' . urlencode($transaction_id);
+
+					$response = bulletproof_transaction_information($api_url, $request_args);
+					if ((isset($response['error'])) && ($response['error'] != "")) {
+						/*
+						echo "<label style='color:red;'>";
+						echo "Message from the BulletProof API Transaction endpoint:" . $response['error'];
+						if ((isset($response['id'])) && ($response['id'] != "")) {
+							echo " Error code for Support:" . $response['id'];
+						}
+						echo "</label>";
+						*/
+					} else {
+						if (($transaction_id != "") && ($response != "") && (isset($response[0])) && (isset($response[0]['transactionid'])) && ($response[0]['transactionid'] == $transaction_id)) {
+							if (isset($response[0]['cc_type'])) {
+								$card_type = $response[0]['cc_type'];
+							}
+							if (isset($response[0]['first6'])) {
+								$card_first6 = $response[0]['first6'];
+							}
+							if (isset($response[0]['last4'])) {
+								$card_last4 = $response[0]['last4'];
+							}
+
+
+						}
+					}
+				}
 
 				$current_3ds = return_meta_data_lite($result_found, '_bpcheckout_3DS');
 				$current_3ds_eci = return_meta_data_lite($result_found, '_3DS_eci');
@@ -96,46 +160,52 @@ class Bulletproof_Shop_Orders
 				$paid_date = return_meta_data_lite($result_found, '_paid_date');
 				$refund_date = return_meta_data_lite($result_found, '_bulletproof_gateway_void_or_refund_date');
 				$action_type = return_meta_data_lite($result_found, '_bulletproof_gateway_action_type');
-				$transaction_id = return_meta_data_lite($result_found, '_transaction_id');
 				$any_cancel_reason = return_meta_data_lite($result_found, "_order_cancelled_reason", true);
 				$transaction_type = strtoupper(return_meta_data_lite($result_found, '_bulletproof_gateway_action_type', true));
 				$billing_first_name = return_meta_data_lite($result_found, "_gateway_first_name", true);
 				$billing_last_name = return_meta_data_lite($result_found, "_gateway_last_name", true);
-				$card_type = return_meta_data_lite($result_found, "_gateway_cctype", true);
+if ($card_last4==""){
 				$card_last4 = return_meta_data_lite($result_found, "_gateway_last4", true);
+}
+				if ($card_first6==""){
 				$card_first6 = return_meta_data_lite($result_found, "_gateway_first6", true);
+				}
 				// Cardholder Authentication
 				$cavv = return_meta_data_lite($result_found, "_gateway_cavv", true);
 				$eci = return_meta_data_lite($result_found, "_gateway_eci", true);
 				$cardholder_auth = return_meta_data_lite($result_found, "_gateway_cardholder_auth", true);
 				$display_transaction_id = return_meta_data_lite($result_found, '_payment_gateway_tx_received_prewebhook', true);
 				if ($display_transaction_id == "") $display_transaction_id = $transaction_id;
-				// Check the transaction information
 
+				if (($current_3ds != "") || ($eci != "") || ($cavv != "") || ($received_status == "y")) {
+					echo "<div style='display:inline-block;width:75%;' >";
+					echo "<div style='font-weight:bolder;float: left;'>Payment 3DS status: ";
+					echo "<img src='" . get_site_url() . "/wp-content/plugins/bulletproof-checkout-lite/assets/images/vest_miniv2.png' height='20px' width='auto' alt='3DS Protected' />";
+					echo " <label style='color:green;'>This transaction has received 3DS authentication</label>";
+					echo "<br></div>";
 
-				echo "<div style='display:inline-block;' >";
-				if ($current_3ds != "") {
-					echo "<div style='font-weight:bolder;float: left;'>Payment 3DS status: " . $current_3ds . "<br><br></div>";
-					if (defined('WP_DEBUG') && true === WP_DEBUG) {
+					echo "<div style='font-weight:bolder;float: right;'>";
+					if ($cardholder_auth != "") {
+						echo "Cardholder Authentication: " . $cardholder_auth . "<br>";
+					}
+					if (($current_3ds_eci != "") || ($eci != "")) {
+						echo "ECI received: ";
 						if ($current_3ds_eci != "") {
-							echo "<br><div style='font-weight:bolder;float: left;'>ECI received: " . $current_3ds_eci . "<br><br></div>";
+							echo str_pad($current_3ds_eci, 2, '0', STR_PAD_LEFT);
+						} else {
+							echo str_pad($eci, 2, '0', STR_PAD_LEFT);
 						}
-					}
-				} else {
-					if ($received_status == "y") {
-						echo "<div style='font-weight:bolder;float: left;'>Payment 3DS status: <br>";
-						echo "<img src='" . get_site_url() . "/wp-content/plugins/bulletproof-checkout-lite/assets/images/vest_mini.gif' height='20px' width='auto' alt='Authenticated' />";
-						echo "<br><br></div>";
-						if (defined('WP_DEBUG') && true === WP_DEBUG) {
-							if ($current_3ds_eci != "") {
-								echo "<br><div style='font-weight:bolder;float: left;'>ECI received: " . $current_3ds_eci . "<br><br></div>";
-							}
-						}
-					}
-				}
-				echo "<div style='float: right;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>";
 
-				echo "</div>";
+						echo  "<br>";
+					}
+					if ($cavv != "") {
+						echo " CAVV received: " . $cavv . "<br>";
+					}
+
+					echo "</div>";
+
+					echo "</div>";
+				}
 
 				$order = wc_get_order($post->ID);
 				$date_completed = $order->get_date_completed();
@@ -219,24 +289,26 @@ class Bulletproof_Shop_Orders
 				if ($paid_date != "") {
 					echo "<td>Transaction Date</td>";
 				}
-				echo "<td>Action</td>";
+
 				echo "</tr>";
 				// for main order
 				echo "<tr>";
 				echo "<td>Order</td>";
-
 				echo "<td>" . $active_payment_gateway . "</td>";
 
-
+				$billing_line = "";
 				// Billing info line
 				if ($card_type != '') {
 					$billing_line = "Billing Name: " . $billing_first_name . " " . $billing_last_name . "<br>Credit Card Type: " . $card_type . "<br>Credit Card Number:" . $card_first6 . "******" . $card_last4 . "<br>";
 				} else {
-					$billing_line = "";
+					if ($billing_first_name != "") {
+						$billing_line = "Billing Name: " . $billing_first_name . " " . $billing_last_name . "<br>";
+						if ($card_first6 != "") {
+							$billing_line .= "Credit Card Number:" . $card_first6 . "******" . $card_last4 . "<br>";
+						}
+					}
 				}
 				echo "<td>" . $billing_line . "</td>";
-
-
 				echo "<td>" . $transaction_type . "</td>";
 				echo "<td>";
 
@@ -257,13 +329,7 @@ class Bulletproof_Shop_Orders
 				if ($paid_date != "") {
 					echo "<td>" . $paid_date . "</td>";
 				}
-				// Add any potential action action
-				echo "<td>";
-				// Add any cardholder authentication info
-				if ($cavv != "" && $cardholder_auth == "verified" && $eci!="") {
-					echo "<label style='color:green;'>This transaction has received 3DS authentication</label>";
-				}
-				echo "</td>";
+
 				echo "</tr>";
 
 				// check if the order timed out on the payment screen
@@ -287,6 +353,26 @@ class Bulletproof_Shop_Orders
 						echo "</strong></div>";
 					}
 				}
+			}
+		}
+
+		/**
+		 * Function to make API requests for transaction search
+		 *
+		 * @param string $api_url
+		 * @param array $request_args
+		 * @return array|mixed|object
+		 */
+		function bulletproof_transaction_information($api_url, $request_args)
+		{
+			// API request logic for the transaction search
+			$response = wp_remote_post($api_url, $request_args);
+			if (is_wp_error($response)) {
+				return "";
+			} else {
+				$body = wp_remote_retrieve_body($response);
+				$decoded_response = json_decode($body, true);
+				return $decoded_response;
 			}
 		}
 
@@ -1466,6 +1552,7 @@ class Bulletproof_Shop_Orders
 				'headers' => array(
 					'accept' => 'application/json',
 				),
+				'user-agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0',
 				'body' => '',
 			);
 

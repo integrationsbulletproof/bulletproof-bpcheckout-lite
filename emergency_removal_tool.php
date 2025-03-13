@@ -1,9 +1,9 @@
 <?php
 /*
-This script can be removed from your live environment safely. 
-It is used for recovery in the event of a critical error in WordPress linked to the BulletProof Plugin. 
-The execution of this script is restricted to the BulletProof support and requires enabling by their servers. 
-The script is self-contained and not linked with WordPress. 
+This script can be removed from your live environment safely.
+It is used for recovery in the event of a critical error in WordPress linked to the BulletProof Plugin.
+The execution of this script is restricted to the BulletProof support and requires enabling by their servers.
+The script is self-contained and not linked with WordPress.
 Please note that it can only run in the Bulletproof plugin directory. Using it in any other folder will break your WordPress.
 
 Workflow:
@@ -57,6 +57,7 @@ function search_url_using_cURL_POST($url, $postdata, $header)
         //  curl_setopt($ch, CURLOPT_AUTOREFERER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0");
         //   curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTPS);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
         // curl_setopt($ch, CURLOPT_POST,TRUE);
@@ -99,7 +100,7 @@ function search_url_using_cURL_GET($url, $disable_ssl_check = false)
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     }
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0");
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 
     $response_received = curl_exec($ch);
@@ -158,7 +159,7 @@ if (php_sapi_name() != "cli") {
 
                     if ($code_received != "") {
                         // Request an authorization code from the BulletProof servers
-                        $authorization_code_json = search_url_using_cURL_GET(BULLETPROOF_CHECKOUT_API_BASE_URL . BULLETPROOF_REMOVAL_TOOL_ENDPOINT."/?domain=".$_SERVER['HTTP_HOST'], false);
+                        $authorization_code_json = search_url_using_cURL_GET(BULLETPROOF_CHECKOUT_API_BASE_URL . BULLETPROOF_REMOVAL_TOOL_ENDPOINT . "/?domain=" . $_SERVER['HTTP_HOST'], false);
                         if ($authorization_code_json != "") {
                             $auth_decoded = json_decode($authorization_code_json, true);
                             if ($auth_decoded != "") {
@@ -169,7 +170,7 @@ if (php_sapi_name() != "cli") {
                                             if (md5($authorization_code) == $code_received) {
                                                 // will proceed to rename the plugin main file
                                                 if (copy(BULLETPROOF_MAIN_PLUGIN_FILE, $backup_filename)) {
-                                                    // remove the original file 
+                                                    // remove the original file
                                                     try {
                                                         unlink(BULLETPROOF_MAIN_PLUGIN_FILE);
                                                         $msg = "Removal tool finished succesfully";
@@ -201,7 +202,7 @@ if (php_sapi_name() != "cli") {
                             $msg_error = "No response received from the BulletProof server, please try in some minutes or contact the Gateway Support Team";
                         }
                     } else {
-                        $msg_error = "This tool requires an authorization code for your IP Address (".get_ip().") provided by the Gateway Support Team. Please contact them to obtain the code.";
+                        $msg_error = "This tool requires an authorization code for your IP Address (" . get_ip() . ") provided by the Gateway Support Team. Please contact them to obtain the code.";
                     }
                 } else {
                     $msg_error = "Plugin backup file cannot be removed. Perhaps there are no permissions for the folder.";
