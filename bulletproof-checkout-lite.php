@@ -4,15 +4,15 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
- * Version: 1.0.14
+ * Version: 1.0.16
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
- * WC tested up to: 9.6.2
- * Tested up to: 6.7.2
+ * WC tested up to: 10.0.4
+ * Tested up to: 6.8.2
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  */
@@ -136,5 +136,13 @@ if (!function_exists('bulletproof_gateway_lite_2024_visitweb')) {
 		);
 
 		return $settings;
+	}
+}
+
+// Load plugin textdomain for translations at the proper time
+add_action('init', 'bulletproof_load_textdomain');
+if (!function_exists('bulletproof_load_textdomain')) {
+	function bulletproof_load_textdomain() {
+		load_plugin_textdomain('bulletproof-checkout-lite', false, dirname(plugin_basename(__FILE__)) . '/languages');
 	}
 }

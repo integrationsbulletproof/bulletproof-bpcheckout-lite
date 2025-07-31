@@ -48,7 +48,8 @@ class Bulletproof_webhook_class
                     if ($order && ($current_order_status === 'pending' || $current_order_status === 'Pending payment' || $current_order_status === 'failed' || $current_order_status === 'cancelled' || $current_order_status === 'Failed' || $current_order_status === 'Canceled')) {
                         if ($status_after_order_completed != "") {
                             $the_msg = 'Status updated by the BulletProof Plugin from ' . $current_order_status . ' to ' . $status_after_order_completed;
-                            $order->update_status($status_after_order_completed, __($the_msg, 'bulletproof-checkout-lite'));
+                            $translated_msg = did_action('init') ? __($the_msg, 'bulletproof-checkout-lite') : $the_msg;
+                            $order->update_status($status_after_order_completed, $translated_msg);
                         }
                     }
 
@@ -226,7 +227,8 @@ class Bulletproof_webhook_class
                         }
                         if ($valid_amount) {
                             $the_msg = 'Status updated to refund by the BulletProof Plugin';
-                            $order->update_status("refunded", __($the_msg, 'bulletproof-checkout-lite'));
+                            $translated_msg = did_action('init') ? __($the_msg, 'bulletproof-checkout-lite') : $the_msg;
+                            $order->update_status("refunded", $translated_msg);
                         } else {
                             // Partial refund was triggered, just leave a note, but do not update the order status
                             $currency_code = $order->get_currency();
@@ -253,7 +255,8 @@ class Bulletproof_webhook_class
                 $payment_method_used = $order->get_meta('_payment_method', true);
                 if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
                     $the_msg = 'Status updated to cancelled by the BulletProof Plugin';
-                    $order->update_status("cancelled", __($the_msg, 'bulletproof-checkout-lite'));
+                    $translated_msg = did_action('init') ? __($the_msg, 'bulletproof-checkout-lite') : $the_msg;
+                    $order->update_status("cancelled", $translated_msg);
                     $order->save();
                 }
             }

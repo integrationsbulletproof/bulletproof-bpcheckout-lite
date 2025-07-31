@@ -137,7 +137,9 @@ if (!function_exists('bulletproof_payment_gateway_checkout_msg')) {
     {
         if ((isset($_GET['msg'])) && ($_GET['msg'] != "")) {
             if (function_exists("wc_add_notice")) {
-                wc_add_notice(__(sanitize_text_field(urldecode($_GET['msg'])), 'bulletproof-checkout-lite'), 'error');
+                $msg = sanitize_text_field(urldecode($_GET['msg']));
+                $translated_msg = did_action('init') ? __($msg, 'bulletproof-checkout-lite') : $msg;
+                wc_add_notice($translated_msg, 'error');
             }
         }
     }

@@ -1,9 +1,10 @@
 === BulletProof Payment Gateway ===
 Contributors: bulletproofcheckout
 Tags: woocommerce, 3DS, payment gateway, bulletproof, NMI, chargeback
-Requires at least: 4.0
-Tested up to: 6.7.1
-Stable tag: 1.0.7
+WC requires at least: 5.0
+WC tested up to: 9.6.2
+Tested up to: 6.7.2
+Stable tag: 1.0.16
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -123,7 +124,7 @@ Preventing a chargeback avoids the following:
   https://yoursitename.com/?rest_route=/bpcheckout/webhooks
   Everyother site can use:
   https://yoursitename.com/wp-content/plugins/bulletproof-checkout-lite/webhook.php
-
+6. After your initial usage you can safely remove the file "emergency_removal_tool.php" from the plugin root folder 
 
 == Configuration ==
 
@@ -220,3 +221,5 @@ Added support for merchants with and without 3DS
 Added a Patch for failed transactions not reported
 = 1.0.11 =
 Added support for Webhooks
+= 1.0.16 =
+Added support for Countries without zip codes, added support for translations

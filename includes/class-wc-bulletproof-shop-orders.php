@@ -1495,7 +1495,8 @@ if ($card_last4==""){
 
 	public function bulletproof_frontend_enqueue_scripts()
 	{
-		wp_enqueue_script('frontend-script', plugins_url('../assets/js/frontend.js', __FILE__), array('jquery'), '1.0', true);
+		// removed on March31 2025 looking for PCI DSS 4.XX compliance regarding 6.4.3
+		//wp_enqueue_script('frontend-script', plugins_url('../assets/js/frontend.js', __FILE__), array('jquery'), '1.0', true);
 	}
 
 	public function bulletproof_admin_enqueue_custom_scripts()
@@ -1511,8 +1512,7 @@ if ($card_last4==""){
 	//Add column header
 	public function bulletproof_checkout_capture_column_header($columns)
 	{
-
-		$columns['payment_capture_column'] = __('Features', 'bulletproof-checkout-lite');
+		$columns['payment_capture_column'] = did_action('init') ? __('Features', 'bulletproof-checkout-lite') : 'Features';
 		return $columns;
 	}
 
@@ -1585,7 +1585,8 @@ if ($card_last4==""){
 					if ($status_after_payment_completed == "") $status_after_payment_completed = "completed";
 
 					if ($status_after_payment_completed != "bp_donotchange") {
-						$order->update_status($status_after_payment_completed, __('Status after capture payment updated by the BulletProof Plugin. ', 'bulletproof-checkout-lite'));
+						$msg = did_action('init') ? __('Status after capture payment updated by the BulletProof Plugin. ', 'bulletproof-checkout-lite') : 'Status after capture payment updated by the BulletProof Plugin. ';
+						$order->update_status($status_after_payment_completed, $msg);
 					}
 
 

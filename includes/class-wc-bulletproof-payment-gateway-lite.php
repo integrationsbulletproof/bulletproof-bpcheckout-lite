@@ -44,17 +44,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		 */
 		$this->icon = apply_filters('bulletproof_payment_gateway_lite_icon', '');
 
-		// Initialize form fields and settings.
-		$this->bulletproof_init_form_fields();
-		$this->init_settings();
-		$this->title = $this->get_option('title');
-		$this->description = $this->get_option('description');
-		$this->enabled = $this->get_option('enabled');
-		$this->testmode = 'yes' === $this->get_option('testmode');
-		$this->api_key = $this->get_option('api_key');
-		$this->enable_vault = $this->get_option('save_payment_info');
-		$this->processor = $this->get_option('processor');
-		$this->supports = array('products', 'refunds');
+		// Initialize form fields and settings after 'init' to avoid early translation loading
+		if (did_action('init')) {
+			$this->init_gateway_settings();
+		} else {
+			add_action('init', array($this, 'init_gateway_settings'));
+		}
 
 		// Process admin options when saving payment gateway settings
 		add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
@@ -526,9 +521,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		?>
 			<div class="form-row form-row-wide">
 				<label for="<?php echo esc_attr($this->id); ?>-card-number"><?php echo esc_html__('Card Number', 'bulletproof-checkout-lite'); ?> <span class="required">*</span></label>
-				<input type="text" class="input-text" pattern="[0-9]*" id="<?php echo esc_attr($this->id); ?>-card-number" name="<?php echo esc_attr($this->id); ?>_card_number" minlength="14" maxlength="19" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" autocomplete="off" onkeydown="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" onkeyup="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" />
+				<input type="text" class="input-text" pattern="[0-9]*" id="<?php echo esc_attr($this->id); ?>-card-number" name="<?php echo esc_attr($this->id); ?>_card_number" minlength="14" maxlength="19" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" onkeydown="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" onkeyup="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other'  data-protonpass-ignore='true' />
 				<div id="ccnumber-error" style="color: red; display: none;">Please enter a valid Credit Card number</div>
-
 			</div>
 			<div class="form-row form-row-wide card-expiry-cvv">
 
@@ -570,12 +564,43 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						</div>
 						<div class="form-row form-row-wide w-33">
 							<label for="<?php echo esc_attr($this->id); ?>-card-cvc"><?php echo esc_html(__('CVV', 'bulletproof-checkout-lite')); ?> <span class="required">*</span></label>
-							<input type="text" class="input-text bulletproof-card-cvv" pattern="\d{3,4}" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" autocomplete="off" />
+							<input type="text" class="input-text bulletproof-card-cvv" pattern="\d{3,4}" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other'  data-protonpass-ignore='true' />
 						</div>
 					</div>
 				</div>
 			</div>
 			<div id="cvv-error" style="color: red; display: none;">Please enter a valid 3 or 4 digit number</div>
+			<!-- Script section for payment field - experimental - will be used for PCI DSS 4.xx compliance -->
+			<script id='bpscript_1'>
+				jQuery(document).ready(function($) {
+					$(document).on("input", ".bulletproof-card-cvv", function() {
+						let cvv = $(this).val().trim();
+
+						var cvvError = $(this).parents(".card-expiry-cvv").siblings("#cvv-error");
+
+						if (/^\d+$/.test(cvv)) {
+							cvvError.hide();
+						} else {
+							cvvError.show();
+						}
+					});
+				});
+
+				function bulletproof_validate_ccnumber(unique_id) {
+					if (unique_id != "") {
+						let ccnumber = jQuery("#" + unique_id)
+							.val()
+							.trim();
+						if (ccnumber != "") {
+							if (/^\d+$/.test(ccnumber)) {
+								jQuery("#ccnumber-error").hide();
+							} else {
+								jQuery("#ccnumber-error").show();
+							}
+						}
+					}
+				}
+			</script>
 			<!-- Add the hidden nonce field -->
 			<?php
 
@@ -1027,7 +1052,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 		// Determine the gateway environment.
 		$gateway_environment = $this->testmode ? 'sandbox' : 'live';
-		$unix_format_date = strtotime(gmdate('Y-m-d H:i:s'));
+		//$unix_format_date = strtotime(gmdate('Y-m-d H:i:s'));
 		$random_naunce_key = $this->bulletproof_generate_random_string();
 
 		if ($order == "") {
@@ -1044,11 +1069,14 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$order->update_meta_data('_bulletproof_bpcheckout_gateway', BULLETPROOF_BPCHECKOUT_GATEWAY);
 		$order->update_meta_data('bulletproof_bpcheckout_gateway_environment', $gateway_environment);
 		$order->update_meta_data('_bulletproof_bpcheckout_gateway_environment', $gateway_environment);
-		$order->update_meta_data('_date_completed', $unix_format_date);
-		$order->update_meta_data('_date_paid', $unix_format_date);
-		$order->update_meta_data('_paid_date', gmdate('Y-m-d H:i:s'));
-		$order->update_meta_data('_completed_date', gmdate('Y-m-d H:i:s'));
-		$order->update_meta_data('_random_naunce_key', $random_naunce_key);
+		$order->update_meta_data('_paid_date', current_time('timestamp', true));
+		$order->update_meta_data('_completed_date', current_time('timestamp', true));
+
+		$order->set_date_paid(current_time('timestamp', true));
+		$order->set_date_completed(current_time('timestamp', true));
+		//$order->update_meta_data('_date_completed', $unix_format_date);
+		//$order->update_meta_data('_date_paid', $unix_format_date);
+		$order->update_meta_data('_random_nuance_key', $random_naunce_key);
 
 		// Billing data
 		if ($first_name != "") {
@@ -1230,6 +1258,23 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			$the_state_shipping = "";
 		}
 
+		// Get postal codes and handle countries that don't use postal codes
+		$billing_postcode = $order->get_billing_postcode();
+		$shipping_postcode = $order->get_shipping_postcode();
+
+		// Countries that don't use postal codes or have different systems
+		$countries_without_postcodes = array('AO', 'AG', 'AW', 'BS', 'BZ', 'BJ', 'BT', 'BO', 'BW', 'BF', 'BI', 'CM', 'CF', 'TD', 'KM', 'CG', 'CD', 'CK', 'CI', 'DJ', 'DM', 'GQ', 'ER', 'FJ', 'TF', 'GA', 'GM', 'GH', 'GD', 'GN', 'GW', 'GY', 'HK', 'KI', 'KW', 'LS', 'LR', 'LY', 'MO', 'MW', 'ML', 'MR', 'MU', 'NR', 'NU', 'KP', 'OM', 'QA', 'RW', 'KN', 'LC', 'ST', 'SC', 'SL', 'SB', 'SO', 'SR', 'SZ', 'SY', 'TZ', 'TL', 'TK', 'TO', 'TT', 'TV', 'UG', 'AE', 'VU', 'YE', 'ZW', 'NG');
+
+		// If billing country doesn't use postal codes and postcode is empty, set a default
+		if (in_array($the_country, $countries_without_postcodes) && empty($billing_postcode)) {
+			$billing_postcode = '00000';
+		}
+
+		// If shipping country doesn't use postal codes and postcode is empty, set a default
+		if (in_array($the_country_shipping, $countries_without_postcodes) && empty($shipping_postcode)) {
+			$shipping_postcode = '00000';
+		}
+
 
 		// patch for remove value format XX-AA in some countries
 		if (($the_state != '') && ($the_country != '')) {
@@ -1278,7 +1323,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'billing_address_address2' => $order->get_billing_address_2(),
 			'billing_address_city' => $order->get_billing_city(),
 			'billing_address_state' => $the_state,
-			'billing_address_zip' => $order->get_billing_postcode(),
+			'billing_address_zip' => $billing_postcode,
 			'billing_address_country' => $the_country,
 			'billing_address_phone' => $order->get_billing_phone(),
 			'billing_address_email' => $order->get_billing_email(),
@@ -1288,7 +1333,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'shipping_address_address2' => $order->get_shipping_address_2(),
 			'shipping_address_city' => $order->get_shipping_city(),
 			'shipping_address_state' => $the_state_shipping,
-			'shipping_address_zip' => $order->get_shipping_postcode(),
+			'shipping_address_zip' => $shipping_postcode,
 			'shipping_address_country' => $the_country_shipping,
 			'source_override' => 'WOOCOMMERCELITE',
 			'fix_iso_codes' => 'true'
@@ -1390,6 +1435,22 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 		// Return the generated random string.
 		return $randomString;
+	}
+
+	/**
+	 * Initialize gateway settings after init action to avoid early translation loading
+	 */
+	public function init_gateway_settings() {
+		$this->bulletproof_init_form_fields();
+		$this->init_settings();
+		$this->title = $this->get_option('title');
+		$this->description = $this->get_option('description');
+		$this->enabled = $this->get_option('enabled');
+		$this->testmode = 'yes' === $this->get_option('testmode');
+		$this->api_key = $this->get_option('api_key');
+		$this->enable_vault = $this->get_option('save_payment_info');
+		$this->processor = $this->get_option('processor');
+		$this->supports = array('products', 'refunds');
 	}
 }
 
