@@ -124,7 +124,7 @@ Preventing a chargeback avoids the following:
   https://yoursitename.com/?rest_route=/bpcheckout/webhooks
   Everyother site can use:
   https://yoursitename.com/wp-content/plugins/bulletproof-checkout-lite/webhook.php
-6. After your initial usage you can safely remove the file "emergency_removal_tool.php" from the plugin root folder 
+6. After your initial usage you can safely remove the file "emergency_removal_tool.php" from the plugin root folder
 
 == Configuration ==
 
@@ -223,3 +223,5 @@ Added a Patch for failed transactions not reported
 Added support for Webhooks
 = 1.0.16 =
 Added support for Countries without zip codes, added support for translations
+= 1.0.17 =
+Tested with WooCommerce version 10.0.4

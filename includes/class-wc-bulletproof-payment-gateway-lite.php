@@ -22,6 +22,13 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		'products',
 		'refunds'
 	);
+
+	private function get_gateway_icon()
+	{
+		$png_icon = plugin_dir_url('bulletproof-checkout-lite') . "bulletproof-checkout-lite/assets/images/jacket50.png";
+		return $png_icon;
+	}
+
 	public $allowed_card_types = array('visa', 'mastercard', 'amex', 'discover'); // other options jcb , diners-club
 	/**
 	 * Constructor function to initialize the payment gateway settings.
@@ -37,12 +44,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		//$this->has_fields = false;
 		//$this->method_description = 'BulletProof payment gateway lite for WooCommerce';
 		/**
-		 * Filter the icon for the Bulletproof Payment Gateway Lite.
+		 * Filter the icon for the Bulletproof Payment Gateway Lite. Set the icon after everything is initialized
 		 *
 		 * @since 1.0.0
 		 * @param string $icon The icon HTML code.
 		 */
-		$this->icon = apply_filters('bulletproof_payment_gateway_lite_icon', '');
+		$this->icon = $this->get_gateway_icon();
 
 		// Initialize form fields and settings after 'init' to avoid early translation loading
 		if (did_action('init')) {
@@ -117,7 +124,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				'title'       => __('Title', 'bulletproof-checkout-lite'),
 				'type'        => 'text',
 				'description' => 'This controls the title which the user sees during checkout.',
-				'default'     => 'Credit Card',
+				'default'     => 'Secure Credit Card Payment',
 				'desc_tip'    => true,
 			),
 			'description' => array(
@@ -448,6 +455,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 			$body = wp_remote_retrieve_body($response);
 			$decoded_response = json_decode($body, true);
+
+			if (isset($decoded_response['error']) && $decoded_response['error'] != "" && isset($decoded_response['response_code']) && $decoded_response['response_code'] != "" && isset($decoded_response['responsetext']) && $decoded_response['responsetext'] != "") {
+			}
 			return $decoded_response;
 		}
 	}
@@ -521,7 +531,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		?>
 			<div class="form-row form-row-wide">
 				<label for="<?php echo esc_attr($this->id); ?>-card-number"><?php echo esc_html__('Card Number', 'bulletproof-checkout-lite'); ?> <span class="required">*</span></label>
-				<input type="text" class="input-text" pattern="[0-9]*" id="<?php echo esc_attr($this->id); ?>-card-number" name="<?php echo esc_attr($this->id); ?>_card_number" minlength="14" maxlength="19" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" onkeydown="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" onkeyup="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other'  data-protonpass-ignore='true' />
+				<input type="text" class="input-text" pattern="[0-9]*" id="<?php echo esc_attr($this->id); ?>-card-number" name="<?php echo esc_attr($this->id); ?>_card_number" minlength="14" maxlength="19" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" onkeydown="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" onkeyup="bulletproof_validate_ccnumber('<?php echo esc_attr($this->id); ?>-card-number');" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other' data-protonpass-ignore='true' />
 				<div id="ccnumber-error" style="color: red; display: none;">Please enter a valid Credit Card number</div>
 			</div>
 			<div class="form-row form-row-wide card-expiry-cvv">
@@ -564,7 +574,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						</div>
 						<div class="form-row form-row-wide w-33">
 							<label for="<?php echo esc_attr($this->id); ?>-card-cvc"><?php echo esc_html(__('CVV', 'bulletproof-checkout-lite')); ?> <span class="required">*</span></label>
-							<input type="text" class="input-text bulletproof-card-cvv" pattern="\d{3,4}" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other'  data-protonpass-ignore='true' />
+							<input type="text" class="input-text bulletproof-card-cvv" pattern="\d{3,4}" minlength="3" maxlength="4" id="<?php echo esc_attr($this->id); ?>-card-cvc" name="<?php echo esc_attr($this->id); ?>_card_cvc" inputmode="numeric" autocorrect="no" autocapitalize="no" spellcheck="no" placeholder="" autocomplete='new-password' data-1p-ignore data-lpignore='true' data-bwignore data-form-type='other' data-protonpass-ignore='true' />
 						</div>
 					</div>
 				</div>
@@ -695,18 +705,51 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				}
 
 				// Make the refund API call.
+				error_log("Starting refund at the BulletProof Gateway for the Order ID#:" . $order_id);
+
 				$response = $this->bulletproof_refund_payment_api($api_url, $request_args);
 				error_log(print_r($response, true));
 
-				if ((isset($response['error'])) && ($response['error'] != "")) {
-					error_log(print_r($response['error'], true));
-					return new WP_Error('bulletproof_refund_api_error', $response['error']);
+				if (((isset($response['error'])) && ($response['error'] != "")) || (is_wp_error($response)) || (empty($response))) {
+					if (isset($response['error'])) {
+						error_log(print_r($response['error'], true));
+					} else {
+						if (is_wp_error($response)) {
+							error_log(print_r($response->get_error_message(), true));
+						} else {
+							if (empty($response)) {
+								error_log(print_r('No response from the gateway (Network error)', true));
+							} else {
+								error_log(print_r('Unknown error occurred.', true));
+							}
+						}
+					}
+					$error_message = '';
+					if (is_wp_error($response)) {
+						$error_message = $response->get_error_message();
+					} elseif (isset($response['error'])) {
+						$error_message = $response['error'];
+					} else {
+						if (empty($response)) {
+							$error_message = 'No response from the gateway (Network error)';
+						} else {
+							$error_message = 'Unknown error occurred.';
+						}
+					}
+					$the_msg = "Refund failed for Order " . $order_id . ": " . $error_message;
+					$order->add_order_note($the_msg);
+					$order->save();
+					return new WP_Error('bulletproof_refund_api_error', $error_message);
 				} else {
 					// $order->update_status('refunded');
 					// $order->add_order_note('Refunded via BulletProof Checkout.');
 
 					$the_msg = "Order " . $order_id . " was refunded succesfully";
-
+					if ($amount != '' && $amount > 0) {
+						$the_msg .= " for the amount of " . wc_price($amount);
+					}
+					// add a note with the refund success message
+					$order->add_order_note($the_msg);
 					error_log($the_msg);
 					//error_log($response_refund);
 					try {
@@ -749,6 +792,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 											$order->update_meta_data('_bulletproof_voided', true);
 										}
 									}
+								} else {
+									// Nothing was returned (Network error)
+									$data_to_store = $response;
 								}
 							} else {
 								$data_to_store = $response;
@@ -757,8 +803,15 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 							$data_to_store = $response;
 						}
 					}
-					$order->update_meta_data('_bulletproof_refund_response', $data_to_store);
-					$order->update_meta_data('_bulletproof_refund_response_flag', "2");
+					if (!empty($data_to_store)) {
+						$order->update_meta_data('_bulletproof_refund_response', $data_to_store);
+						$order->update_meta_data('_bulletproof_refund_response_flag', "2");
+					} else {
+						$error_message = 'No response from the gateway - Network error try again later';
+						$order->update_meta_data('_bulletproof_refund_response', $error_message);
+						$order->update_meta_data('_bulletproof_refund_response_flag', "3");
+						return new WP_Error('bulletproof_refund_api_error', $error_message);
+					}
 					//	}
 					// json array for register refund transactions
 					if (($refund_transactionid != $transaction_id) && ($refund_transactionid != "")) {
@@ -776,7 +829,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					return true;
 				}
 			} else {
-				$the_msg = "The refund was not processed due to a missing transaction ID. The WooCommerce order lacks an attached gateway transaction. Please reach out to the gateway support team.";
+				$the_msg = "The refund was not processed because of a missing transaction ID. The WooCommerce order doesn't have an attached gateway transaction. Please contact the gateway support team.";
 				error_log(print_r($the_msg, true));
 				return new WP_Error('bulletproof_no_transaction_id', $the_msg);
 			}
@@ -1440,7 +1493,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	/**
 	 * Initialize gateway settings after init action to avoid early translation loading
 	 */
-	public function init_gateway_settings() {
+	public function init_gateway_settings()
+	{
 		$this->bulletproof_init_form_fields();
 		$this->init_settings();
 		$this->title = $this->get_option('title');
