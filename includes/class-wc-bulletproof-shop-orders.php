@@ -39,9 +39,10 @@ class Bulletproof_Shop_Orders
 			if (is_admin()) {
 				add_meta_box(
 					'custom_meta_box_lite',
-					__('Payment information', 'woocommerce'),
+					__('Payment information - BulletProof Checkout Lite', 'woocommerce'),
 					'shop_order_content_callback_bulletproof_lite_2223738',
-					'shop_order'
+					'shop_order',
+					'normal'
 				);
 			}
 		}
@@ -80,8 +81,11 @@ class Bulletproof_Shop_Orders
 		// displaying metabox Order content
 		function shop_order_content_callback_bulletproof_lite_2223738($post)
 		{
-$card_first6="";
-$card_last4="";
+			$card_first6 = "";
+			$card_last4 = "";
+			$gateway_settings = "";
+			$username = "";
+
 			// get the billing data received
 
 			$result_found = \get_metadata("post", $post->ID);
@@ -102,6 +106,7 @@ $card_last4="";
 						'body' => '',
 					);
 					$gateway_settings = get_option('woocommerce_bulletproof_bpcheckout_lite_settings');
+
 					$username = $gateway_settings['username'];
 					$password = $gateway_settings['password'];
 					$test_mode = $gateway_settings['testmode'];
@@ -146,8 +151,6 @@ $card_last4="";
 							if (isset($response[0]['last4'])) {
 								$card_last4 = $response[0]['last4'];
 							}
-
-
 						}
 					}
 				}
@@ -164,11 +167,11 @@ $card_last4="";
 				$transaction_type = strtoupper(return_meta_data_lite($result_found, '_bulletproof_gateway_action_type', true));
 				$billing_first_name = return_meta_data_lite($result_found, "_gateway_first_name", true);
 				$billing_last_name = return_meta_data_lite($result_found, "_gateway_last_name", true);
-if ($card_last4==""){
-				$card_last4 = return_meta_data_lite($result_found, "_gateway_last4", true);
-}
-				if ($card_first6==""){
-				$card_first6 = return_meta_data_lite($result_found, "_gateway_first6", true);
+				if ($card_last4 == "") {
+					$card_last4 = return_meta_data_lite($result_found, "_gateway_last4", true);
+				}
+				if ($card_first6 == "") {
+					$card_first6 = return_meta_data_lite($result_found, "_gateway_first6", true);
 				}
 				// Cardholder Authentication
 				$cavv = return_meta_data_lite($result_found, "_gateway_cavv", true);
@@ -207,11 +210,117 @@ if ($card_last4==""){
 					echo "</div>";
 				}
 
+				// get the transaction information at the gateway level via API
+				if ($gateway_settings == "") {
+					$gateway_settings = get_option('woocommerce_bulletproof_bpcheckout_lite_settings');
+					$username = $gateway_settings['username'];
+					$password = $gateway_settings['password'];
+					$test_mode = $gateway_settings['testmode'];
+					$security_key = $gateway_settings['api_key'];
+				}
+				// search related transactions with the same Order Id
+				if (($username != "") && ($password != "") && ($security_key != "")) {
+					// Locate the API endpoint to be used
+					$base_api_url = "";
+					try {
+						if (($test_mode == "no") || ($test_mode == "")) {
+							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SEARCH;
+						} else {
+							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_SEARCH;
+						}
+					} catch (Exception $e) {
+						$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SEARCH;
+					}
+
+					$request_args = array(
+						'headers' => array(
+							'accept' => 'application/json',
+						),
+						'user-agent' => 'Mozilla/5.0 (Linux; Android 10; SM-G996U Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Mobile Safari/537.36 BulletProofCheckout/1.0',
+						'body' => '',
+					);
+
+					$api_url = $base_api_url . '?user=' . urlencode($username) .
+						'&pass=' . urlencode($password) .
+						'&security_key=' . urlencode($security_key) .
+						'&orderId=' . urlencode($post->ID);
+					$response_display = "";
+					$response_search = bulletproof_transaction_information($api_url, $request_args);
+					$show_error = false;
+					$do_not_show_response = false;
+					if (!empty($response_search)) {
+						// check if the response is a json
+						if (is_string($response_search)) {
+							$response_json = json_decode($response_search, true);
+						} else {
+							$response_json = $response_search;
+						}
+						if ($response_json != "") {
+
+							if ((isset($response_json["id"])) && (isset($response_json["error"])) && ($response_json["error"] != "")) {
+								$show_error = true;
+								if ($response_json["id"] == "823") { // No access to the API endpoint
+									$response_display = $response_json["error"] . " Your current Bulletproof Payment Gateway Lite user is:" . $username . ", please provide this information to support.";
+									$response_display .= " with the url:" . $api_url;
+								} else {
+									if (($response_json["id"] == "839") || ($response_json["id"] == "820")) { // No access, maybe is an older transaction and currently the user does not have enabled the bulletproof service
+										$response_display = "";
+										$show_error = false;
+										$do_not_show_response = true;
+									} else {
+										$response_display = $response_json["error"];
+										$response_display .= " Error #:" . $response_json["id"];
+									}
+								}
+							}
+							if (defined('WP_DEBUG') && true === WP_DEBUG) {
+								if ($show_error) {
+									echo "<p style='color:green;font-weight:bolder;'>" . $response_display . "</p>";
+								}
+							}
+							if (!$do_not_show_response) {
+								// receive the transaction information live from the gateway
+								/*
+								if (defined('WP_DEBUG') && true === WP_DEBUG) {
+									// arrar response_json will be like:
+									//var_dump($response_json);
+									if (isset($response_json["data"])) {
+										if (is_array($response_json["data"])) {
+											if (count($response_json["data"]) > 0) {
+												echo "<p style='color:blue;font-weight:bolder;'>" . count($response_json["data"]) . " transaction(s) found for this Order ID " . $post->ID . "</p>";
+											}
+											// array(4) { ["data"]=> array(1) { [0]=> array(5) { ["transactionid"]=> string(11) "11180612726" ["Transaction Date"]=> string(19) "2025-09-24 19:59:38" ["status"]=> string(17) "pendingsettlement" ["amount"]=> string(5) "25.57" ["batchId"]=> string(0) "" } } ["records"]=> string(1) "1" ["page"]=> string(0) "" ["total_pages"]=> int(1) }
+											foreach ($response_json["data"] as $transaction) {
+												if ($display_transaction_id != $transaction['transactionid']) {
+													echo "<div style='border:1px solid gray;margin-top:5px;padding:5px;'>";
+													echo "<strong>Transaction ID:</strong> " . $transaction['transactionid'] . "<br>";
+													echo "<strong>Transaction Date:</strong> " . $transaction['Transaction Date'] . "<br>";
+													echo "<strong>Status:</strong> " . $transaction['status'] . "<br>";
+													echo "<strong>Amount:</strong> " . get_woocommerce_currency_symbol() . $transaction['amount'] . "<br>";
+													if (isset($transaction['batchId'])) {
+														if ($transaction['batchId'] != "") {
+															echo "<strong>Batch ID:</strong> " . $transaction['batchId'] . "<br>";
+														}
+													}
+													echo "</div>";
+												}
+											}
+										}
+									}
+								}
+									*/
+							}
+							//}
+						}
+					}
+				}
+
+
 				$order = wc_get_order($post->ID);
 				$date_completed = $order->get_date_completed();
 				$datefrom = new DateTime($date_completed);
 				$dateto = new DateTime();
-				$days_diff = $datefrom->diff($dateto)->days;  // days since order was completed
+				$days_diff = $datefrom->diff($dateto)->days;  // days since order was completed (legacy)
 
 
 
@@ -229,7 +338,7 @@ if ($card_last4==""){
 								$display_refund_button = true;
 							}
 						} else {
-							// search if profile had permissions to Refund resource
+							// search if profile had permissions to the Refund resource
 							if (bulletproof_lite_profile_has_access(strtolower($roles[0]), "refunds")) {
 								$display_refund_button = true;
 							}
@@ -253,7 +362,7 @@ if ($card_last4==""){
 							if (strtolower($roles[0]) == 'administrator') {
 								$display_refund_button = true;
 							} else {
-								// search if profile had permissions to Refund resource
+								// search if profile had permissions to the Refund resource
 								if (bulletproof_lite_profile_has_access(strtolower($roles[0]), "refunds")) {
 									$display_refund_button = true;
 								}
@@ -286,11 +395,12 @@ if ($card_last4==""){
 
 				echo "<td>Amount</td>";
 
-				if ($paid_date != "") {
+				//if ($paid_date != "") {
 					echo "<td>Transaction Date</td>";
-				}
+				//}
 
 				echo "</tr>";
+				if ($display_transaction_id!=""){
 				// for main order
 				echo "<tr>";
 				echo "<td>Order</td>";
@@ -317,7 +427,7 @@ if ($card_last4==""){
 					if ($_SERVER['HTTP_HOST'] == "localhost") { // Used for development environments
 						$url = "https://localhost/portal/index.php?tx=" . $display_transaction_id;
 					} else {
-						$url = "https://live.bpcheckout.com/portal/index.php?tx=" . $display_transaction_id;
+						$url = "https://bulletproofcheckout.net/portal/index.php?tx=" . $display_transaction_id;
 					}
 					echo "<a onclick=\"window.open('" . $url . "', '_blank', 'location=no,height=800,width=1024,scrollbars=yes,status=yes');\" style='cursor:pointer;'>";
 					echo $display_transaction_id;
@@ -326,12 +436,65 @@ if ($card_last4==""){
 				echo "</td>";
 
 				echo "<td>" .  get_woocommerce_currency_symbol() . get_post_meta($post->ID, '_order_total', true) . "</td>";
-				if ($paid_date != "") {
+				//if ($paid_date != "") {
 					echo "<td>" . $paid_date . "</td>";
-				}
+				//}
 
 				echo "</tr>";
+			}
+				// any other transaction with the same order id will be here
 
+				if (isset($response_json["data"])) {
+					if ($active_payment_gateway==""){
+						$active_payment_gateway="BPCHECKOUT"; // as default in case of the tr5ansaction was initially failed
+					}
+					if (is_array($response_json["data"])) {
+						// array(4) { ["data"]=> array(1) { [0]=> array(5) { ["transactionid"]=> string(11) "11180612726" ["Transaction Date"]=> string(19) "2025-09-24 19:59:38" ["status"]=> string(17) "pendingsettlement" ["amount"]=> string(5) "25.57" ["batchId"]=> string(0) "" } } ["records"]=> string(1) "1" ["page"]=> string(0) "" ["total_pages"]=> int(1) }
+						foreach ($response_json["data"] as $transaction) {
+							//if ($display_transaction_id != $transaction['transactionid']) {
+							if (($transaction['status'] != "completed") && ($transaction['status'] != "pendingsettlement")) {
+								echo "<tr>";
+								echo "<td>Order</td>";
+								echo "<td>" . $active_payment_gateway . "</td>";
+								echo "<td></td>";
+								echo "<td>" . strtoupper($transaction['status']) . "</td>";
+								echo "<td>";
+
+								if ($transaction['transactionid'] != "") {
+									if ($display_transaction_id != $transaction['transactionid']) {
+										// only show if is different from the main transaction id
+										if ($_SERVER['HTTP_HOST'] == "localhost") { // Used for development environments
+											$url = "https://localhost/portal/index.php?tx=" .  $transaction['transactionid'];
+										} else {
+											$url = "https://bulletproofcheckout.net/portal/index.php?tx=" .  $transaction['transactionid'];
+										}
+										echo "<a onclick=\"window.open('" . $url . "', '_blank', 'location=no,height=800,width=1024,scrollbars=yes,status=yes');\" style='cursor:pointer;'>";
+										echo $transaction['transactionid'];
+										echo "</a>";
+									} else {
+										echo $transaction['transactionid'];
+									}
+								}
+								echo  "</td>";
+								echo "<td>" . get_woocommerce_currency_symbol() . $transaction['amount'] . "</td>";
+								echo "<td>" . $transaction['Transaction Date'] . "</td>";
+								if (isset($transaction['batchId'])) {
+									if ($transaction['batchId'] != "") {
+										echo "<td>" . $transaction['batchId'] . "</td>";
+									} else {
+										echo "<td></td>";
+									}
+								} else {
+									echo "<td></td>";
+								}
+								echo "</tr>";
+								//}
+							}
+						}
+					}
+				}
+
+				echo "</table>";
 				// check if the order timed out on the payment screen
 				if (($current_post_status != "wc-complete") && ($current_post_status != "wc-approve")) {
 
@@ -365,7 +528,7 @@ if ($card_last4==""){
 		 */
 		function bulletproof_transaction_information($api_url, $request_args)
 		{
-			// API request logic for the transaction search
+			// API request logic for
 			$response = wp_remote_post($api_url, $request_args);
 			if (is_wp_error($response)) {
 				return "";

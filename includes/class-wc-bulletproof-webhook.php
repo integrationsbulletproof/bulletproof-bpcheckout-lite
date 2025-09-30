@@ -118,7 +118,7 @@ class Bulletproof_webhook_class
     }
 
     /**
-     * Register the sale failure
+     * Register any sale failure
      */
     private function register_sale_failure($data, $status_after_order_completed)
     {
@@ -191,7 +191,33 @@ class Bulletproof_webhook_class
                             $order->update_meta_data('_bulletproof_gateway_failed_processor', $processor);
                         }
                     }
+                    $order->update_meta_data('_bulletproof_gateway_failed_sale_date', current_time('mysql'));
                     $order->save();
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Register any refund failure
+     */
+    private function register_refund_failure($data, $status_after_order_completed)
+    {
+        if ((isset($data['order_id'])) && (is_numeric($data['order_id']))) {
+            $order = wc_get_order($data['order_id']);
+            if ($order) {
+                // Only if the payment method used was the BulletProof Lite Plugin will update the status
+                $payment_method_used = $order->get_meta('_payment_method', true);
+                if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
+                    if ((isset($data['transaction_id'])) && ($data['transaction_id'] != "")) {
+                        $the_msg = 'Refund failure registered by the BulletProof Plugin for transaction ' . $data['transaction_id'];
+                        $translated_msg = did_action('init') ? __($the_msg, 'bulletproof-checkout-lite') : $the_msg;
+                        $order->add_order_note($translated_msg);
+                        // register the last refund failure date
+                        $order->update_meta_data('_bulletproof_gateway_failed_refund_date', current_time('mysql'));
+                        $order->save();
+                    }
                 }
             }
         }
@@ -236,6 +262,7 @@ class Bulletproof_webhook_class
                             $the_msg = "Partial refund issued by the BulletProof Gateway for " . $currency_symbol . number_format($data['requested_amount'], 2, '.', '');
                             $order->add_order_note($the_msg);
                         }
+                        $order->update_meta_data('_bulletproof_gateway_success_refund_date', current_time('mysql'));
                         $order->save();
                     }
                 }
@@ -403,6 +430,9 @@ class Bulletproof_webhook_class
                                         break;
                                     case "transaction.refund.success":
                                         self::refund_order($data, $next_status);
+                                        break;
+                                    case "transaction.refund.failure":
+                                        self::register_refund_failure($data, $next_status);
                                         break;
                                     default:
                                         $msg = "Invalid event type received";

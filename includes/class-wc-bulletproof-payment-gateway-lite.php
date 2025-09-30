@@ -434,6 +434,41 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		add_rewrite_endpoint('bulletproof-payment-processing', EP_ROOT | EP_PAGES);
 	}
 
+	/**
+	 * A resilient version of wp_remote_post with retries and delays.
+	 *
+	 * @param string $url The URL to send the POST request to.
+	 * @param array $args Arguments for wp_remote_post.
+	 * @param int $max_retries Maximum number of retries.
+	 * @param int $delay_seconds Delay between retries in seconds.
+	 * @return array|WP_Error The response or WP_Error on failure.
+	 */
+	private function resilient_remote_post($url, $args, $max_retries = 3, $delay_seconds = 5)
+	{
+		$retries = 0;
+		while ($retries < $max_retries) {
+			$response = wp_remote_post($url, $args);
+
+			// Check for a WP_Error or a non-200 HTTP status code.
+			if (! is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+				// Success.
+				return $response;
+			}
+
+			// Log the error for debugging purposes.
+			error_log('wp_remote_post failed. Attempt: ' . ($retries + 1) . '. Error: ' . (is_wp_error($response) ? $response->get_error_message() : wp_remote_retrieve_response_message($response)));
+
+			$retries++;
+			if ($retries < $max_retries) {
+				// Wait before retrying.
+				sleep($delay_seconds);
+			}
+		}
+
+		// Return the final failed response after exhausting all retries.
+		return $response;
+	}
+
 
 	/**
 	 * Function to make API requests for refund payment.
@@ -718,7 +753,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 							error_log(print_r($response->get_error_message(), true));
 						} else {
 							if (empty($response)) {
-								error_log(print_r('No response from the gateway (Network error)', true));
+								error_log(print_r('No response from the gateway (Network error). The refund status must be checked manually on the BulletProof portal.', true));
 							} else {
 								error_log(print_r('Unknown error occurred.', true));
 							}
@@ -731,7 +766,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						$error_message = $response['error'];
 					} else {
 						if (empty($response)) {
-							$error_message = 'No response from the gateway (Network error)';
+							$error_message = 'No response from the gateway ( Network error ). The refund status must be checked manually on the BulletProof portal.';
 						} else {
 							$error_message = 'Unknown error occurred.';
 						}
@@ -1340,14 +1375,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				$the_state_shipping = str_replace($the_country_shipping . "-", "", $the_state_shipping);
 			}
 		}
-		// check if state is longer than 3 characters
-		if (strlen($the_state) > 3) {
-			$the_state = $this->left($the_state, 3);
-		}
-		if (strlen($the_state_shipping) > 3) {
-			$the_state_shipping = $this->left($the_state_shipping, 3);
-		}
-
+		
 		// Build an array of sale authorization parameters.
 		// The parameter fix_iso_codes will ignore states (which are not on ISO format)
 		$sale_auth_params = array(
@@ -1456,9 +1484,16 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			// Log an error message if the API request fails.
 			error_log('API request failed: ' . $response->get_error_message());
 		} else {
+
 			// Decode the JSON response.
 			$body = json_decode(wp_remote_retrieve_body($response));
 			// Return the decoded response.
+			if ($body == "" && $response != "") {
+				$body = wp_remote_retrieve_body($response);
+			}
+			if ($body == "" && $response != "" && isset($response['body']) && $response['body']!="") {
+				$body = $response['body'];
+			}
 			return $body;
 		}
 	}

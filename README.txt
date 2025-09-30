@@ -1,10 +1,10 @@
 === BulletProof Payment Gateway ===
 Contributors: bulletproofcheckout
-Tags: woocommerce, 3DS, payment gateway, bulletproof, NMI, chargeback
+Tags: woocommerce, 3DS, payment gateway, bulletproof, chargeback, fraud prevention
 WC requires at least: 5.0
-WC tested up to: 9.6.2
-Tested up to: 6.7.2
-Stable tag: 1.0.16
+WC tested up to: 10.2.2
+Tested up to: 6.8.2
+Stable tag: 1.0.21
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -181,7 +181,7 @@ Contact info@bulletproof-checkout.com
 - Yes
 
 ### Countries Served
-- Currently we support US, CA, and UK. We receive Credit Cards Worldwide.
+- Currently we support merchants located on USA, Canada, Mexico and UK. We receive Credit Cards Worldwide.
 
 
 ### What are the requirements or paperwork needed?
@@ -225,3 +225,12 @@ Added support for Webhooks
 Added support for Countries without zip codes, added support for translations
 = 1.0.17 =
 Tested with WooCommerce version 10.0.4
+= 1.0.18 =
+Tested with WooCommerce version 10.1.2
+= 1.0.19 =
+Extra payment information at the Order detail
+Tested with WooCommerce version 10.2.1
+= 1.0.20 =
+Tested with WooCommerce version 10.2.2
+= 1.0.21 =
+Added zip code denial reason at the Checkout

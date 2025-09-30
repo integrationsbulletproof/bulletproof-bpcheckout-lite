@@ -4,14 +4,14 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
- * Version: 1.0.19
+ * Version: 1.0.21
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
- * WC tested up to: 10.1.2
+ * WC tested up to: 10.2.2
  * Tested up to: 6.8.2
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
@@ -25,9 +25,12 @@ if (!defined('ABSPATH')) {
 // Live Endpoints
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL')) define('BULLETPROOF_CHECKOUT_API_BASE_URL', 'https://bulletproofcheckout.net/API/endpoints/directpost/');
 if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_PAYMENTS', 'https://bulletproofcheckout.net/API/endpoints/payment/view/');
+if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SEARCH')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SEARCH', 'https://bulletproofcheckout.net/API/endpoints/payment/search/');
 // Sandbox Endpoints
-if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX', 'https://bulletproofcheckout.net/APIsandbox/endpoints/directpost/');
-if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS', 'https://bulletproofcheckout.net/APIsandbox/endpoints/payment/view/');
+	if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX', 'https://bulletproofcheckout.net/APIsandbox/endpoints/directpost/');
+	if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_PAYMENTS', 'https://bulletproofcheckout.net/APIsandbox/endpoints/payment/view/');
+	if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_SEARCH')) define('BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX_SEARCH', 'https://bulletproofcheckout.net/APIsandbox/endpoints/payment/search/');
+
 
 if (!defined('BULLETPROOF_CHECKOUT_GATEWAY')) define('BULLETPROOF_CHECKOUT_GATEWAY', 'BP');
 if (!defined('BULLETPROOF_CHECKOUT_FORMAT')) define('BULLETPROOF_CHECKOUT_FORMAT', 'raw');
@@ -142,7 +145,8 @@ if (!function_exists('bulletproof_gateway_lite_2024_visitweb')) {
 // Load plugin textdomain for translations at the proper time
 add_action('init', 'bulletproof_load_textdomain');
 if (!function_exists('bulletproof_load_textdomain')) {
-	function bulletproof_load_textdomain() {
+	function bulletproof_load_textdomain()
+	{
 		load_plugin_textdomain('bulletproof-checkout-lite', false, dirname(plugin_basename(__FILE__)) . '/languages');
 	}
 }
