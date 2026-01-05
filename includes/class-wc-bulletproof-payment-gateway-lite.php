@@ -349,6 +349,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 	public function bulletproof_payment_response_handler()
 	{
+		$logger = wc_get_logger();
+		$context = array('source' => 'bpcheckout-App');
 		// Check if the order status has already been updated.
 		$status_updated = false;
 		// Nonce verification is not applicable for this payment response, as it is coming from payment processor.
@@ -364,6 +366,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$denial_response = isset($_GET['denial']) ? intval($_GET['denial']) : 0;
 		// Code for processing payment responses based on query parameters.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		$logger->info("Data received in the payment response handler: bulletproof_payment_response_handler()", $context);
+		$logger->info(print_r($_GET, true), $context);
 
 		// Non-3DS customers also will be able to update their postmeta information
 		//if (!empty($_GET['3ds_approved']) && !empty($order_id) && !empty($transaction_id)) {
@@ -381,7 +386,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					if ($status_after_payment_completed == "") $status_after_payment_completed = "completed";
 					if ($status_after_payment_completed != "bp_donotchange") {
 						$order->update_status($status_after_payment_completed, __('Status after payment received updated by the BulletProof Plugin. ', 'bulletproof-checkout-lite'));
-						$the_msg = 'Status updated by the BulletProof Plugin due to sale method found is:' . $sale_method_found . '. ';
+						$the_msg = 'Status updated by the BulletProof Plugin Order#:' . $order_id . ' due to sale method found is:' . $sale_method_found . '. Status assigned:' . $status_after_payment_completed;
+						$logger->info($the_msg, $context);
 					}
 				}
 				wc_maybe_reduce_stock_levels($order_id);
@@ -393,12 +399,15 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				}
 				if ($order) {
 					$order->update_status('wc-on-hold', __($the_msg, 'bulletproof-checkout-lite'));
+					$the_msg .= ' Status assigned: on-hold . Order#'	 . $order_id;
+					$logger->info($the_msg, $context);
 				}
 			}
 			if ($order) {
 				$order->set_transaction_id($transaction_id);
 				$order->update_meta_data('_bulletproof_gateway_action_type', $sale_method_found);
 				$order->save();
+				$logger->info("Update the transaction ID  for Order#:" . $order_id." to: " . $transaction_id, $context);
 			}
 			WC()->cart->empty_cart();
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -419,6 +428,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				if ($order) {
 					$order->update_status('wc-failed');
 					$order->add_order_note($failed_msg);
+					$logger->info("The transaction for Order#:" . $order_id." was failed. " . $failed_msg, $context);
 				}
 			}
 		}
@@ -484,15 +494,36 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		// API request logic for refund.
 		$response = wp_remote_post($api_url, $request_args);
 
+		// setting log class
+		$logger = wc_get_logger();
+		$context = array('source' => 'bpcheckout-App');
 		if (is_wp_error($response)) {
-			error_log('Refund API request failed: ' . $response->get_error_message());
-		} else {
-
-			$body = wp_remote_retrieve_body($response);
-			$decoded_response = json_decode($body, true);
-
-			if (isset($decoded_response['error']) && $decoded_response['error'] != "" && isset($decoded_response['response_code']) && $decoded_response['response_code'] != "" && isset($decoded_response['responsetext']) && $decoded_response['responsetext'] != "") {
+			$response_detail = "Refund API request failed";
+			if ($response->get_error_message() != "") {
+				$response_detail .= ': ' . $response->get_error_message();
 			}
+			$logger->info($response_detail, $context);
+			return $response;
+		} else {
+			$decoded_response = "";
+			$body = wp_remote_retrieve_body($response);
+			if (empty($body)) {
+				$logger->info('Refund API request returned an empty body.', $context);
+			} else {
+
+				$decoded_response = json_decode($body, true);
+				if ($body != "" && ($decoded_response === null || $decoded_response == "")) {
+					$logger->info('Refund API request returned invalid JSON: ' . $body, $context);
+					//return new WP_Error('invalid_json', 'The BulletProof API response is not valid JSON. Please contact the gateway support team');
+
+				} else {
+					$logger->info('Refund API request response: ' . print_r($decoded_response, true), $context);
+				}
+			}
+			//if (isset($decoded_response['error']) && $decoded_response['error'] != "" && isset($decoded_response['response_code']) && $decoded_response['response_code'] != "" && isset($decoded_response['responsetext']) && $decoded_response['responsetext'] != "") {
+			//return new WP_Error('invalid_order', 'Invalid order.');
+			//}
+
 			return $decoded_response;
 		}
 	}
@@ -688,8 +719,11 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 	public function process_refund($order_id, $amount = null, $reason = '')
 	{
-
-
+		error_log('BulletProof is Starting refund Order id#: ' . $order_id);
+		// setting log class
+		$logger = wc_get_logger();
+		$context = array('source' => 'bpcheckout-App');
+		$logger->info('Starting refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount, $context);
 		// Get the WooCommerce order.
 		$order = wc_get_order($order_id);
 		// Check if the order is valid.
@@ -704,6 +738,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$transaction_id = $order->get_meta('_payment_gateway_tx_received', true);
 		// Prepare request arguments.
 		$request_args = array(
+			'method'      => 'POST',
+			'timeout'     => 25,
+			'redirection' => 5,
 			'headers' => array(
 				'accept' => 'application/json',
 			),
@@ -711,18 +748,20 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			'body' => '',
 		);
 
-		error_log('Executing refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount);
+		$logger->info('Executing refund Order id#: ' . $order_id . ' . Amount to be refunded:' . $amount, $context);
 
 		if ((strtolower($this->get_option('enabled')) == "yes")) {
-			if ($transaction_id != "") {
+			if ((!empty($transaction_id)) && $transaction_id != "") {
 				// Locate the API endpoint to be used
 				$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
+				$is_sandbox = false;
 				try {
 					if ((strtolower($this->get_option('testmode')) == "no") || ($this->get_option('testmode') == "")) {
 						$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL;
 					} else {
 						if (strtolower($this->get_option('testmode')) == "yes") {
 							$base_api_url = BULLETPROOF_CHECKOUT_API_BASE_URL_SANDBOX;
+							$is_sandbox = true;
 						}
 					}
 				} catch (Exception $e) {
@@ -734,28 +773,34 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					'&pass=' . urlencode($password) .
 					'&security_key=' . urlencode($security_key) .
 					'&transactionid=' . urlencode($transaction_id);
+				$api_url_masked = $base_api_url . 'refund.php?user=&pass=&security_key=&transactionid=' . urlencode($transaction_id);
 				// adds support for partial refunds
 				if ($amount != "") {
 					$api_url .= '&amount=' . $amount;
+					$api_url_masked .= '&amount=' . $amount;
 				}
 
 				// Make the refund API call.
-				error_log("Starting refund at the BulletProof Gateway for the Order ID#:" . $order_id);
+				$logger->info("Starting refund at the BulletProof Gateway for the Order ID#:" . $order_id . " API ENDPOINT:" . $api_url_masked, $context);
 
 				$response = $this->bulletproof_refund_payment_api($api_url, $request_args);
 				error_log(print_r($response, true));
 
 				if (((isset($response['error'])) && ($response['error'] != "")) || (is_wp_error($response)) || (empty($response))) {
 					if (isset($response['error'])) {
-						error_log(print_r($response['error'], true));
+						$logger->info(print_r($response['error'], true), $context);
 					} else {
 						if (is_wp_error($response)) {
-							error_log(print_r($response->get_error_message(), true));
+							$logger->info(print_r($response->get_error_message(), true), $context);
 						} else {
 							if (empty($response)) {
-								error_log(print_r('No response from the gateway (Network error). The refund status must be checked manually on the BulletProof portal.', true));
+								$the_msg = 'No response from the gateway (Network error). The refund status must be checked manually on the BulletProof portal.';
+								if ($is_sandbox) {
+									$the_msg .= ' (Sandbox mode)';
+								}
+								$logger->info(print_r($the_msg, true), $context);
 							} else {
-								error_log(print_r('Unknown error occurred.', true));
+								$logger->info(print_r('Unknown error occurred.', true), $context);
 							}
 						}
 					}
@@ -767,6 +812,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					} else {
 						if (empty($response)) {
 							$error_message = 'No response from the gateway ( Network error ). The refund status must be checked manually on the BulletProof portal.';
+							if ($is_sandbox) {
+								$error_message .= ' (Sandbox mode)';
+							}
 						} else {
 							$error_message = 'Unknown error occurred.';
 						}
@@ -774,24 +822,21 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					$the_msg = "Refund failed for Order " . $order_id . ": " . $error_message;
 					$order->add_order_note($the_msg);
 					$order->save();
+					$logger->info($error_message, $context);
 					return new WP_Error('bulletproof_refund_api_error', $error_message);
 				} else {
 					// $order->update_status('refunded');
 					// $order->add_order_note('Refunded via BulletProof Checkout.');
 
-					$the_msg = "Order " . $order_id . " was refunded succesfully";
-					if ($amount != '' && $amount > 0) {
-						$the_msg .= " for the amount of " . wc_price($amount);
-					}
-					// add a note with the refund success message
-					$order->add_order_note($the_msg);
-					error_log($the_msg);
-					//error_log($response_refund);
+
+
+
 					try {
 						$current_user = wp_get_current_user();
 					} catch (Exception $ex) {
 						$current_user = "";
 					}
+
 					$the_username = "";
 					if (isset($current_user->user_login)) {
 						$the_username = $current_user->user_login;
@@ -806,38 +851,57 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					$order->update_meta_data('_bulletproof_refunded', true);
 					// json array for register refund transactions
 					//	if (is_string($response)) {
+					$data_to_store = "";
 					$refund_transactionid = "";
-					if ((isset($response->action)) && ($response->action == "refund")) {
-						if ((isset($response->data))) {
-							$data_to_store = $response->data;
+					try {
+
+						if ((isset($response->action)) && (($response->action == "refund") || ($response->action == "void"))) {
+							if ((isset($response->data))) {
+								$data_to_store = $response->data;
+							} else {
+								$data_to_store = $response;
+							}
 						} else {
-							$data_to_store = $response;
-						}
-					} else {
-						if ((isset($response['action'])) && ($response['action'] == "refund")) {
-							if ((isset($response['data']))) {
-								$data_to_store = $response['data'];
-								if (strpos($data_to_store, "&") > 0) {
-									parse_str($data_to_store, $result_array);
-									if ((isset($result_array['transactionid'])) && ($result_array['transactionid'] != "")) {
-										if ($transaction_id != $result_array['transactionid']) {
-											$refund_transactionid = $result_array['transactionid'];
+							if ((isset($response['action'])) && ($response['action'] == "refund")) {
+								if ((isset($response['data']))) {
+									$data_to_store = $response['data'];
+									if (strpos($data_to_store, "&") > 0) {
+										parse_str($data_to_store, $result_array);
+										if ((isset($result_array['transactionid'])) && ($result_array['transactionid'] != "")) {
+											if ($transaction_id != $result_array['transactionid']) {
+												$refund_transactionid = $result_array['transactionid'];
+											}
+											if ((isset($result_array['type'])) && ($result_array['type'] == "void")) {
+												$order->update_meta_data('_bulletproof_voided', true);
+											}
 										}
-										if ((isset($result_array['type'])) && ($result_array['type'] == "void")) {
-											$order->update_meta_data('_bulletproof_voided', true);
-										}
+									} else {
+										// Nothing was returned (Network error)
+										$data_to_store = $response;
 									}
 								} else {
-									// Nothing was returned (Network error)
 									$data_to_store = $response;
 								}
 							} else {
 								$data_to_store = $response;
 							}
-						} else {
-							$data_to_store = $response;
 						}
+					} catch (Exception $ex) {
+						// in case of error save any updated metadata
+						$logger->info($ex->getMessage(), $context);
+						$order->save();
 					}
+					// add a note with the refund success message
+					$the_msg = "Order " . $order_id . " was refunded succesfully";
+					if ($amount != '' && $amount > 0) {
+						$the_msg .= " for the amount of " . wc_price($amount);
+					}
+					if ($refund_transactionid != "") {
+						$the_msg .= ". Refund Transaction ID: " . $refund_transactionid;
+					}
+					$order->add_order_note($the_msg);
+					$logger->info($the_msg, $context);
+
 					if (!empty($data_to_store)) {
 						$order->update_meta_data('_bulletproof_refund_response', $data_to_store);
 						$order->update_meta_data('_bulletproof_refund_response_flag', "2");
@@ -845,19 +909,27 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						$error_message = 'No response from the gateway - Network error try again later';
 						$order->update_meta_data('_bulletproof_refund_response', $error_message);
 						$order->update_meta_data('_bulletproof_refund_response_flag', "3");
+						$order->save();
+						$logger->info($error_message, $context);
 						return new WP_Error('bulletproof_refund_api_error', $error_message);
 					}
 					//	}
 					// json array for register refund transactions
-					if (($refund_transactionid != $transaction_id) && ($refund_transactionid != "")) {
-						$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
-						if ($transaction_id_refunds != "") {
-							$refund_ids_array = json_decode($transaction_id_refunds, true);
-						} else {
-							$refund_ids_array = array();
+					try {
+						if (($refund_transactionid != $transaction_id) && ($refund_transactionid != "")) {
+							$transaction_id_refunds = $order->get_meta('_payment_gateway_tx_refunds', true);
+							if ($transaction_id_refunds != "") {
+								$refund_ids_array = json_decode($transaction_id_refunds, true);
+							} else {
+								$refund_ids_array = array();
+							}
+							array_push($refund_ids_array, $refund_transactionid);
+							$order->update_meta_data('_payment_gateway_tx_refunds', json_encode($refund_ids_array));
+							$the_msg = "Order " . $order_id . " refund transaction id received: " . $refund_transactionid;
+							$logger->info($the_msg, $context);
 						}
-						array_push($refund_ids_array, $refund_transactionid);
-						$order->update_meta_data('_payment_gateway_tx_refunds', json_encode($refund_ids_array));
+					} catch (Exception $ex) {
+						$logger->info($ex->getMessage(), $context);
 					}
 					$order->save();
 
@@ -865,12 +937,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				}
 			} else {
 				$the_msg = "The refund was not processed because of a missing transaction ID. The WooCommerce order doesn't have an attached gateway transaction. Please contact the gateway support team.";
-				error_log(print_r($the_msg, true));
+				$logger->info($the_msg, $context);
 				return new WP_Error('bulletproof_no_transaction_id', $the_msg);
 			}
 		} else {
 			$the_msg = "Refund endpoint not available due to the Payment Gateway is disabled";
-			error_log(print_r($the_msg, true));
+			$logger->info($the_msg, $context);
 			return new WP_Error('bulletproof_disabled', $the_msg);
 		}
 	}
@@ -885,6 +957,9 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 	public function bulletproof_get_processors($username, $password, $security_key)
 	{
 		// Locate the API endpoint to be used
+		// setting log class
+		$logger = wc_get_logger();
+		$context = array('source' => 'bpcheckout-App');
 		$base_api_url = "";
 		try {
 			if ((strtolower($this->get_option('testmode')) == "no") || ($this->get_option('testmode') == "")) {
@@ -926,7 +1001,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		} else {
 			// Log an error message if the API request fails.
 			$error_message = is_wp_error($response) ? $response->get_error_message() : 'Unknown error occurred';
-			error_log('Processors API request failed: ' . $response->get_error_message());
+			$logger->info('Processors API request failed: ' . $response->get_error_message(), $context);
 		}
 
 
@@ -1007,6 +1082,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			return;
 		}
 
+
+
 		// check if the plugin is enabled
 		if ((strtolower($this->get_option('enabled')) == "yes")) {
 
@@ -1028,6 +1105,11 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			// Set the API URL for sale authorization.
 			$sale_auth_api_url = $base_api_url . "?rndx=" . time();
 
+			// setting log class
+			$logger = wc_get_logger();
+			$context = array('source' => 'bpcheckout-App');
+			$logger->info("Starting payment Order ID#" . $order_id, $context);
+
 			// Get sale authorization parameters.
 			$sale_auth_params = $this->bulletproof_checkout_api_params($order, $order_id);
 
@@ -1040,7 +1122,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 
 					// Build the validation API URL.
 					$validate_api_url = $base_api_url . 'validate.php?token=' . $sale_auth_response->token;
-
+					$logger->info("Payment Step 1 completed - Order ID#" . $order_id, $context);
 					// Return success with redirection URL.
 					return array(
 						'result' => 'success',
@@ -1066,7 +1148,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						esc_html($template),
 						esc_html($sale_auth_response->error)
 					);
-
+					$logger->info($formatted_message . ". Response from Order ID#" . $order_id, $context);
 					// Display an error notice and return an empty array.
 					self::bulletproof_display_notice($formatted_message, 'error');
 					$order->update_status('wc-failed');
@@ -1082,12 +1164,11 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						esc_html($error_invalid_response)
 					);
 					$order->update_status('wc-failed');
-
+					$logger->info($formatted_message . ". Order ID#" . $order_id, $context);
+					$logger->info($sale_auth_response, $context);
 					self::bulletproof_display_notice($formatted_message, 'error');
 				}
 			} else {
-
-
 				// Adding translators comment
 				/* translators: %s: Error message from the response */
 				$template = __('Error: %s', 'bulletproof-checkout-lite');
@@ -1103,6 +1184,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				// Display an error notice and return an empty array.
 				self::bulletproof_display_notice($formatted_message, 'error');
 				$order->update_status('wc-failed');
+				$logger->info($formatted_message . ". Order ID#" . $order_id, $context);
 				return array();
 			}
 		} else {
@@ -1375,7 +1457,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				$the_state_shipping = str_replace($the_country_shipping . "-", "", $the_state_shipping);
 			}
 		}
-		
+
 		// Build an array of sale authorization parameters.
 		// The parameter fix_iso_codes will ignore states (which are not on ISO format)
 		$sale_auth_params = array(
@@ -1472,6 +1554,8 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		$response = wp_remote_post(
 			$api_url,
 			array(
+				'timeout'     => 25,
+				'redirection' => 5,
 				'body'    => $params,
 				'headers' => array(
 					'accept' => 'application/json',
@@ -1482,7 +1566,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		// Check for WP_Error.
 		if (is_wp_error($response)) {
 			// Log an error message if the API request fails.
-			error_log('API request failed: ' . $response->get_error_message());
+			// setting log class
+			$the_msg = 'API request failed: ' . $response->get_error_message();
+			error_log($the_msg);
+			$logger = wc_get_logger();
+			$context = array('source' => 'bpcheckout-App');
+			$logger->info($the_msg, $context);
 		} else {
 
 			// Decode the JSON response.
@@ -1491,7 +1580,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 			if ($body == "" && $response != "") {
 				$body = wp_remote_retrieve_body($response);
 			}
-			if ($body == "" && $response != "" && isset($response['body']) && $response['body']!="") {
+			if ($body == "" && $response != "" && isset($response['body']) && $response['body'] != "") {
 				$body = $response['body'];
 			}
 			return $body;

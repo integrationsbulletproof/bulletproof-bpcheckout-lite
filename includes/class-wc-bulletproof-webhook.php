@@ -229,9 +229,15 @@ class Bulletproof_webhook_class
     private function refund_order($data, $status_after_order_completed)
     {
         if ((isset($data['order_id'])) && (is_numeric($data['order_id']))) {
+            if (isset($data['transaction_id'])){
+                $transaction_id = $data['transaction_id'];
+            } else {
+                $transaction_id = "";
+            }
             $order = wc_get_order($data['order_id']);
             if ($order) {
-                if ($order && ($order->get_status() === 'pending' || $order->get_status() === 'Pending payment') || ($order->get_status() === 'completed') || ($order->get_status() === $status_after_order_completed)) {
+                //if ($order && ($order->get_status() === 'pending' || $order->get_status() === 'Pending payment') || ($order->get_status() === 'completed') || ($order->get_status() === $status_after_order_completed)) {
+                if ($order && ($order->get_status() != 'refunded' && $order->get_status() != 'cancelled')) {
                     // Only if the payment method used was the BulletProof Lite Plugin will update the status
                     $payment_method_used = $order->get_meta('_payment_method', true);
                     if (($payment_method_used == "bulletproof_bpcheckout_lite") || ($payment_method_used == "bulletproof_bpcheckout")) {
@@ -260,6 +266,9 @@ class Bulletproof_webhook_class
                             $currency_code = $order->get_currency();
                             $currency_symbol = get_woocommerce_currency_symbol($currency_code);
                             $the_msg = "Partial refund issued by the BulletProof Gateway for " . $currency_symbol . number_format($data['requested_amount'], 2, '.', '');
+                            if ($transaction_id!=""){
+                                $the_msg .= " for transaction " . $transaction_id;
+                            }
                             $order->add_order_note($the_msg);
                         }
                         $order->update_meta_data('_bulletproof_gateway_success_refund_date', current_time('mysql'));
@@ -438,10 +447,12 @@ class Bulletproof_webhook_class
                                         $msg = "Invalid event type received";
                                         header("HTTP/1.0 404 " . $msg, true, 404);
                                         echo json_encode($msg);
+                                        error_log("BulletProof Webhook error: " . $msg . " IP Address:" . $the_ip. " Event Type:".$event_type);
                                         die();
                                         break;
                                 }
                                 echo json_encode("OK");
+                                error_log("BulletProof executed webhook successfully for IP Address:" . $the_ip . " Event Type:".$event_type);
                                 die();
                             } else {
                                 $msg = "Invalid data received";
@@ -465,9 +476,11 @@ class Bulletproof_webhook_class
             }
             header("HTTP/1.0 404 " . $msg, true, 404);
             echo json_encode($msg);
+            error_log("BulletProof Webhook error: " . $msg . " IP Address:" . $the_ip);
         } else {
             header("HTTP/1.0 404 Not Authorized", true, 404);
             echo json_encode("Not Authorized. IP Address:" . $the_ip);
+            error_log("BulletProof Webhook unauthorized access attempt from IP Address:" . $the_ip);
         }
     }
 }

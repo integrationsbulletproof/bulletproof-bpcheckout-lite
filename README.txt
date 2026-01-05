@@ -2,9 +2,9 @@
 Contributors: bulletproofcheckout
 Tags: woocommerce, 3DS, payment gateway, bulletproof, chargeback, fraud prevention
 WC requires at least: 5.0
-WC tested up to: 10.2.2
-Tested up to: 6.8.2
-Stable tag: 1.0.21
+WC tested up to: 10.3.7
+Tested up to: 6.8.3
+Stable tag: 1.0.24
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -234,3 +234,7 @@ Tested with WooCommerce version 10.2.1
 Tested with WooCommerce version 10.2.2
 = 1.0.21 =
 Added zip code denial reason at the Checkout
+= 1.0.22 =
+Added custom logger to the Wordpress Logs
+= 1.0.24 =
+Remove unused admin notices
