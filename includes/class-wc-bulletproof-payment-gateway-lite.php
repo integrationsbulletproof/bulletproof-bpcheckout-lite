@@ -390,7 +390,12 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						$logger->info($the_msg, $context);
 					}
 				}
-				wc_maybe_reduce_stock_levels($order_id);
+				if (is_numeric($order_id)) {
+					try {
+						wc_maybe_reduce_stock_levels((int)$order_id);
+					} catch (Exception $e) {
+					}
+				}
 			} else {
 				if ($sale_method_found == "") {
 					$the_msg = "No sale was found, please contact the Gateway Support Team";
@@ -407,7 +412,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				$order->set_transaction_id($transaction_id);
 				$order->update_meta_data('_bulletproof_gateway_action_type', $sale_method_found);
 				$order->save();
-				$logger->info("Update the transaction ID  for Order#:" . $order_id." to: " . $transaction_id, $context);
+				$logger->info("Update the transaction ID  for Order#:" . $order_id . " to: " . $transaction_id, $context);
 			}
 			WC()->cart->empty_cart();
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -428,7 +433,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				if ($order) {
 					$order->update_status('wc-failed');
 					$order->add_order_note($failed_msg);
-					$logger->info("The transaction for Order#:" . $order_id." was failed. " . $failed_msg, $context);
+					$logger->info("The transaction for Order#:" . $order_id . " was failed. " . $failed_msg, $context);
 				}
 			}
 		}

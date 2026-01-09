@@ -3,14 +3,14 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
- * Version: 1.0.24
+ * Version: 1.0.25
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
- * WC tested up to: 10.3.7
+ * WC tested up to: 10.4.3
  * Tested up to: 6.9
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce

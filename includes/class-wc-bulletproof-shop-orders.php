@@ -1805,7 +1805,12 @@ class Bulletproof_Shop_Orders
 
 
 					$order->save();
-					wc_maybe_reduce_stock_levels($order_id);
+					if (is_numeric($order_id)) {
+						try {
+							wc_maybe_reduce_stock_levels((int)$order_id);
+						} catch (Exception $e) {
+						}
+					}
 					$data['success'] = true;
 				} else {
 					$data['success'] = false;
@@ -2015,7 +2020,7 @@ class Bulletproof_Shop_Orders
 
 					// The enabled property will be 'yes' if enabled, 'no' if disabled in settings.
 
-					if ((isset($gateway_settings['enabled'] )&&($gateway_settings['enabled'] === 'yes'))) {
+					if ((isset($gateway_settings['enabled']) && ($gateway_settings['enabled'] === 'yes'))) {
 						if (($username == "") || ($password == "") || ($security_key == "")) {
 							// Add admin notice
 							$setting_link = admin_url('admin.php?page=wc-settings&tab=checkout&section=bulletproof_bpcheckout_lite');
