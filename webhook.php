@@ -9,7 +9,7 @@ if (!defined("WP_USE_THEMES")) {
 if (file_exists(__DIR__ . '/../../../wp-blog-header.php')) {
     include_once __DIR__ . '/../../../wp-blog-header.php';
 } else {
-    echo "Invalid location of the Wordpress wp-config file";
+    echo "Invalid location of the WordPress wp-config file";
     die();
     exit;
 }

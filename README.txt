@@ -50,7 +50,7 @@ The plugin interacts with the following API endpoints:
 #### OFFERING
 The BulletProof Checkout gateway is compatible many top credit card processors.  If you currently have a merchant account with a compatible processor or are looking for an integrated processing solution, we can help. Contact us with any questions.
 
-- Payment Agnostic - we integrate with many processors, allowing you to use your current merchant account and help you connect it into our BuletProof Gateway. 
+- Payment Agnostic - we integrate with many processors, allowing you to use your current merchant account and help you connect it into our BulletProof Gateway. 
 
 - Multi Gateway Compatible -- We are also compatible with the NMI gateway.
 
@@ -67,7 +67,7 @@ The BulletProof Checkout gateway is compatible many top credit card processors. 
 If your experience using 3DS did not meet your expectations, it's time to try the BulletProof 3DS difference. 
 - Control the customer checkout experience.
 - 3DS Settings that allow a truly frictionless, intuitive, and lightning-fast customer checkout.
-- Lock in the level or BulletProof 3DS protection to secure against chargebacks.
+- Lock in the level of the BulletProof 3DS protection to secure against chargebacks.
 - User-friendly 3DS solution that requires no programming skills and is easy to set up. 
 - Understand 3DS transaction results through detailed reporting.
 - Responsive tech support and assistance for our plugin and gateway.
@@ -108,7 +108,7 @@ Preventing a chargeback avoids the following:
 - Adds an additional layer of security to SSL with point-to-point encryption for enhanced protection.
 - WooCommerce Order status updates received automatically from the gateway via webhooks.
 - Authorize can capture later direct from the WooCommerce order list
-- Secure "Thank you" page integrated with your WooComemrce store
+- Secure "Thank you" page integrated with your WooCommerce store
 - The payment page offers the highest level of security, preventing system administrators and third parties from altering or injecting malicious code.
 
 
@@ -120,9 +120,9 @@ Preventing a chargeback avoids the following:
 3. Navigate to WooCommerce > Settings > Payments and configure your BulletProof Payment Gateway settings.
 4. Use the credentials provided by the Gateway Support Team
 5. Enter into your BulletProof portal ->Other Services ->Webhooks and create one of these webhooks:
-  If you have a Sucuri Firewall or your site is hosted at Godaddy (or if your firewall blocks the access to the Wordpress plugin directory):
+  If you have a Sucuri Firewall or your site is hosted at Godaddy (or if your firewall blocks the access to the WordPress plugin directory):
   https://yoursitename.com/?rest_route=/bpcheckout/webhooks
-  Everyother site can use:
+  Every other site can use:
   https://yoursitename.com/wp-content/plugins/bulletproof-checkout-lite/webhook.php
 6. After your initial usage you can safely remove the file "emergency_removal_tool.php" from the plugin root folder
 
@@ -133,7 +133,7 @@ Preventing a chargeback avoids the following:
 3. Configure the necessary settings, such as API key, user name and password .
 4. The Webhook API key is located into your BulletProof portal account->Other services->webhooks (follow the instruction provided at the installation section of this readme file)
 5. The Customer Vault feature is only available if you have enabled the Customer Vault feature in your BulletProof Account, otherwise will trigger an error in the checkout. During the initial tests set to "No"
-6. Select your processor, if you leave the processor dropdon unselected then will trigger an error in the checkout page.
+6. Select your processor, if you leave the processor dropdown unselected then will trigger an error in the checkout page.
 7. Save changes.
 
 == Usage ==
@@ -185,7 +185,7 @@ Contact info@bulletproof-checkout.com
 
 
 ### What are the requirements or paperwork needed?
-- Contact us to activate for the any and all of the following
+- Contact us to activate for any and all of the following
 
 To activate the payment gateway contact docs@bulletproof-checkout.com
 
@@ -235,7 +235,7 @@ Tested with WooCommerce version 10.2.2
 = 1.0.21 =
 Added zip code denial reason at the Checkout
 = 1.0.22 =
-Added custom logger to the Wordpress Logs
+Added custom logger to the WordPress Logs
 = 1.0.24 =
 Remove unused admin notices
 = 1.0.25 =

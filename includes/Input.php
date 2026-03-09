@@ -16,15 +16,15 @@ class Input
    * Else It will return false
    * eg : Input::getField('store_id')
    *
-   * @param $key. String - Key whose which value we require
+   * @param $key. String - Key whose value we require
    * @return string|bool
    */
   public static function fetch($key = "", $def = ''){
-  
+
   	global $argv;
 
     $return_value = "";
-   
+
     if( isset($_POST[$key]) ) {
       $return_value = $_POST[$key];
     }
@@ -33,21 +33,21 @@ class Input
     }
     else if( isset($argv) ){
     	$clval = self::getArg($argv, $key);
-    	
+
     	if($clval != ''){
 				$return_value = $clval;
 			}
 
     }
-    
+
 		if(!is_array($return_value)){
 			$return_value = trim($return_value);
 		}
-		
+
 		if($return_value == '' && $def != ''){
 			$return_value = $def;
 		}
-		
+
     return $return_value;
   }
 
@@ -55,8 +55,8 @@ class Input
    * Standard of passing values: php abc.php key=value
    * Will return the value, if key found in command-line arguments
    *
-   * @param $command_args. Array - Collection ofcommand line Strings
-   * @param $item. String - Key whose which value we require
+   * @param $command_args. Array - Collection of command line Strings
+   * @param $key. String - Key whose value we require
    * @return String
    */
   public static function getArg($command_args, $key){

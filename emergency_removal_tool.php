@@ -13,9 +13,9 @@ Workflow:
 4) If the received token matches the authorization code, the main file of the plugin will be renamed to .bak.
 TODO 5) Recursively remove all files of the plugin located under the plugin folder.
 
-Once all the steps in the workflow have been completed, the BulletProof plugin was deactivated and not linked with any error showed by Wordpress.
+Once all the steps in the workflow have been completed, the BulletProof plugin will be deactivated and not linked with any error showed by WordPress.
 
-Important note: After execute this removal tool , if you want to install again the plugin you will require to manually remove the folder wp-content/plugins/bulletproof-checkout-lite with any file manager (cPanel or Wordpress File Manager)
+Important note: After executing this removal tool , if you want to install again the plugin you will need to manually remove the folder wp-content/plugins/bulletproof-checkout-lite with any file manager (cPanel or WordPress File Manager)
 
 */
 
@@ -173,12 +173,12 @@ if (php_sapi_name() != "cli") {
                                                     // remove the original file
                                                     try {
                                                         unlink(BULLETPROOF_MAIN_PLUGIN_FILE);
-                                                        $msg = "Removal tool finished succesfully";
+                                                        $msg = "Removal tool finished successfully";
                                                     } catch (Exception $e) {
                                                         $msg_error = "Plugin main file cannot be removed, probably because you dont have permissions in the server folder.";
                                                     }
                                                 } else {
-                                                    $msg_error = "The tool can not create the backup file, the main file will not be removed";
+                                                    $msg_error = "The tool cannot create the backup file, the main file will not be removed";
                                                 }
                                             } else {
                                                 $msg_error = "Invalid token received";
@@ -215,11 +215,11 @@ if (php_sapi_name() != "cli") {
         if ((isset($_SERVER['HTTP_HOST'])) && ($_SERVER['HTTP_HOST'] == "localhost")) {
             $msg_error = "This tool can not run in a localhost";
         } else {
-            $msg_error = "The site firewall is not showing the HTTP_HOST which is requried by this tool";
+            $msg_error = "The site firewall is not showing the HTTP_HOST which is required by this tool";
         }
     }
 } else {
-    echo "This script can not run via terminal";
+    echo "This script cannot run via terminal";
     die();
     exit;
 }
@@ -239,7 +239,7 @@ if ($msg_error != "") {
     if ($msg != "") {
         show_alert($msg, "alert-success");
     } else {
-        show_alert("The removal tool finished unexpectly", "alert-warning");
+        show_alert("The removal tool finished unexpectedly", "alert-warning");
     }
 }
 

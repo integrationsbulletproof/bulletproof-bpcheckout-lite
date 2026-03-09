@@ -3,14 +3,14 @@
  * Plugin Name: BulletProof Checkout Lite
  * Plugin URI: https://www.bulletproof-checkout.com/
  * Description: Protect your credit card payments with 3D Secure (3DS) and say goodbye to chargebacks.
- * Version: 1.0.25
+ * Version: 1.0.26
  * Author: BulletProof Checkout <support@bulletproof-checkout.com>
  * Author URI: https://www.bulletproof-checkout.com/
  * License: GPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  * Text Domain: bulletproof-checkout-lite
  * WC requires at least: 5.0
- * WC tested up to: 10.4.3
+ * WC tested up to: 10.5.3
  * Tested up to: 6.9
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
@@ -34,7 +34,7 @@ if (!defined('BULLETPROOF_CHECKOUT_API_BASE_URL_SEARCH')) define('BULLETPROOF_CH
 if (!defined('BULLETPROOF_CHECKOUT_GATEWAY')) define('BULLETPROOF_CHECKOUT_GATEWAY', 'BP');
 if (!defined('BULLETPROOF_CHECKOUT_FORMAT')) define('BULLETPROOF_CHECKOUT_FORMAT', 'raw');
 if (!defined('BULLETPROOF_BPCHECKOUT_GATEWAY')) define('BULLETPROOF_BPCHECKOUT_GATEWAY', 'BPCHECKOUT');
-// If the Official Mobile App will be used then will need to disable BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS
+// If the Official Mobile App will be used you will need to disable BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS
 // In the Official Mobile App BulletProof does not support Authorize and Capture later
 if (!defined('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS')) define('BULLETPROOF_CHECKOUT_ADDORDERLISTCOLUMNS', false);
 // Some hosting providers auto-enabled JetPack SSO which is buggy with the Official Mobile App

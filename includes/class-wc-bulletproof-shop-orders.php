@@ -57,7 +57,7 @@ class Bulletproof_Shop_Orders
 		}
 
 
-		// check if a profile (based on Wordpress roles) had access to specific resource (invoices,subscriptions,refunds)
+		// check if a profile (based on WordPress roles) had access to specific resource (invoices,subscriptions,refunds)
 		function bulletproof_lite_profile_has_access($profile, $resource)
 		{
 			$profile = preg_replace("/[^a-zA-Z0-9]+/", "", $profile);
@@ -343,7 +343,7 @@ class Bulletproof_Shop_Orders
 				$cur_status = get_post_status($post->ID);
 				if ($cur_status == "wc-completed") {
 
-					// button will be displayed only for admins or ifuser profile had permissiones
+					// button will be displayed only for admins or if user profile had permissions
 					$display_refund_button = false;
 					if (is_user_logged_in()) {
 						$current_user = wp_get_current_user();
@@ -392,7 +392,7 @@ class Bulletproof_Shop_Orders
 					}
 				}
 
-				// check if a error_msg is returned
+				// check if an error_msg is returned
 				if (isset($_GET['error_msg'])) {
 					echo "<p style='color:red;font-weight:bolder;'>" . urldecode($_GET['error_msg']) . "</p>";
 				}
@@ -469,7 +469,7 @@ class Bulletproof_Shop_Orders
 
 				if (isset($response_json["data"])) {
 					if ($active_payment_gateway == "") {
-						$active_payment_gateway = "BPCHECKOUT"; // as default in case of the tr5ansaction was initially failed
+						$active_payment_gateway = "BPCHECKOUT"; // as default in case of the transaction was initially failed
 					}
 					if (is_array($response_json["data"])) {
 						// array(4) { ["data"]=> array(1) { [0]=> array(5) { ["transactionid"]=> string(11) "11180612726" ["Transaction Date"]=> string(19) "2025-09-24 19:59:38" ["status"]=> string(17) "pendingsettlement" ["amount"]=> string(5) "25.57" ["batchId"]=> string(0) "" } } ["records"]=> string(1) "1" ["page"]=> string(0) "" ["total_pages"]=> int(1) }
@@ -1882,13 +1882,13 @@ class Bulletproof_Shop_Orders
 							}
 							$logger->info($the_msg, $context);
 							if ($error_detail_on_gateway != "") {
-								$order->add_order_note("This order can not be refunded by BulletProof because " . $error_detail_on_gateway);
+								$order->add_order_note("This order cannot be refunded by BulletProof because " . $error_detail_on_gateway);
 								$order->save();
 							}
 							$logger->info($the_msg, $context);
 							return false;
 						} else {
-							$the_msg = "Order " . $order_id . " was refunded succesfully after status update from " . $old_status . " to " . $new_status . ".";
+							$the_msg = "Order " . $order_id . " was refunded successfully after status update from " . $old_status . " to " . $new_status . ".";
 							$logger->info($the_msg, $context);
 							/*
 							try {
@@ -1943,9 +1943,9 @@ class Bulletproof_Shop_Orders
 							return true;
 						}
 					} else {
-						$the_msg = "Order " . $order_id . " is older than one year and can not be refunded in the Payment Gateway";
+						$the_msg = "Order " . $order_id . " is older than one year and cannot be refunded in the Payment Gateway";
 						error_log($the_msg);
-						$order->add_order_note("This order is older than one year and can not be refunded from the BulletProof Checkout Plugin, but the status in WooCommerce was changed to Cancelled");
+						$order->add_order_note("This order is older than one year and cannot be refunded from the BulletProof Checkout Plugin, but the status in WooCommerce was changed to Cancelled");
 						$order->save();
 						$logger->info($the_msg, $context);
 						return false;

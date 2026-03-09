@@ -67,7 +67,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 		// Handle BulletProof payment endpoint
 		add_action('init', array($this, 'bulletproof_payment_endpoint'));
 		// Handle BulletProof portal webhook reception
-		// Experimental: add a endpoint for receive data instead of /webhook.php (useful for Wordpress firewalled sites like Sucuri)
+		// Experimental: add an endpoint for receive data instead of /webhook.php (useful for WordPress firewalled sites like Sucuri)
 		add_action('rest_api_init', array($this, 'custom_endpoint_for_bp_lite2025'));
 
 		// Handle BulletProof payment response
@@ -897,7 +897,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 						$order->save();
 					}
 					// add a note with the refund success message
-					$the_msg = "Order " . $order_id . " was refunded succesfully";
+					$the_msg = "Order " . $order_id . " was refunded successfully";
 					if ($amount != '' && $amount > 0) {
 						$the_msg .= " for the amount of " . wc_price($amount);
 					}
@@ -1160,7 +1160,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 					return array();
 				} else {
 					//var_dump($sale_auth_response);
-					$error_invalid_response = "Invalid response received from the gateway, please try in some minutes or Contact the Merchant";
+					$error_invalid_response = "Invalid response received from the gateway, please try again in a few minutes or Contact Customer Service";
 					$template = __('Error: %s', 'bulletproof-checkout-lite');
 					// Use sprintf to capture the formatted message
 					$formatted_message = sprintf(
@@ -1177,7 +1177,7 @@ class Bulletproof_Payment_Gateway_Lite extends WC_Payment_Gateway
 				// Adding translators comment
 				/* translators: %s: Error message from the response */
 				$template = __('Error: %s', 'bulletproof-checkout-lite');
-				$error_no_response = "No response received from the Payment Gateway, please Contact the Merchant or try again in some minutes.";
+				$error_no_response = "No response received from the Payment Gateway, please try again in a few minutes or Contact Customer Service.";
 
 				// Use sprintf to capture the formatted message
 				$formatted_message = sprintf(
